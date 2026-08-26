@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://poppingmangosources.github.io/popmango-paperback-sources/0.8/"><img src="media/button-add-08.svg" alt="Add PoppingMango 0.8 to Paperback" height="50"/></a>
+  <a href="https://poppingmangosources.github.io/popmango-paperback-sources/all/"><img src="media/button-add-08.svg" alt="Add PoppingMango 0.8 to Paperback" height="50"/></a>
   &nbsp;
   <a href="https://poppingmangosources.github.io/general-extensions-mangago/0.9/test/"><img src="media/button-add-09.svg" alt="Add PoppingMango 0.9 to Paperback" height="50"/></a>
 </p>
@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <a href="https://poppingmangosources.github.io/popmango-paperback-sources/0.8/"><b>Open the source garden</b></a>
+  <a href="https://poppingmangosources.github.io/popmango-paperback-sources/all/"><b>Open the source garden</b></a>
 </p>
 
 ---
@@ -32,13 +32,13 @@
 
 | Paperback version | Repository | Install page |
 | :---------------- | :--------- | :----------- |
-| **0.8** | This repository contains the converted 0.8 sources. | [Add or browse 0.8 sources](https://poppingmangosources.github.io/popmango-paperback-sources/0.8/) |
+| **0.8** | This repository contains the converted 0.8 sources. | [Add or browse 0.8 sources](https://poppingmangosources.github.io/popmango-paperback-sources/all/) |
 | **0.9** | The current 0.9 source catalog lives in its own repository. | [Add or browse 0.9 sources](https://poppingmangosources.github.io/general-extensions-mangago/0.9/test/) |
 
 On iPhone or iPad, tap the matching install button above. To add the 0.8 repository manually, open **Paperback → Settings → Extensions → Add Repository** and paste:
 
 ~~~text
-https://poppingmangosources.github.io/popmango-paperback-sources/0.8/
+https://poppingmangosources.github.io/popmango-paperback-sources/all/
 ~~~
 
 ## Paperback 0.8 sources
@@ -116,13 +116,13 @@ For a source request, open a repository issue using the source-request form. Req
 ~~~bash
 npm install
 npm run typecheck
-npm run bundle -- --folder=0.8
-npm run readme -- --folder=0.8
-npm run site -- --folder=0.8
+npm run bundle -- --folder=all
+npm run readme -- --folder=all
+npm run site -- --folder=all
 npm test
 ~~~
 
-Pushing <code>main</code> publishes the stable 0.8 catalog at <code>/0.8</code>. Other branches publish to their own preview folders so they can be tested without replacing the stable repository.
+Pushing <code>main</code> publishes the combined source garden at <code>/all</code>. The previous <code>/0.8</code> path remains a compatibility alias so existing Paperback installs continue receiving the current 0.8 bundle.
 
 The [conversion guide](docs/CONVERSION.md) documents the 0.9-to-0.8 capability map. The shared runtime in <code>common/</code> implements the actual Paperback 0.8 interfaces and translates only the pieces the two APIs represent differently.
 
