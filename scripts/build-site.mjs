@@ -5,14 +5,10 @@
  * Generates the repository homepage.
  *
  * The toolchain writes its own page during bundling; this replaces it with a
- * card for each Popmango repository — the 0.8 one built here and the 0.9 one
- * published alongside it. Each card pulls that repository's source list from
- * its versioning.json, and every source in the list installs on its own.
- *
- * Both repositories are served from the same host, so fetching the 0.9 list is
- * a same-origin request and needs no proxy or CORS handling. The 0.8 list is
- * also inlined at build time so the page still fills in when opened straight
- * off disk.
+ * page that carries both Popmango repositories — the 0.8 one built here and
+ * the 0.9 one published alongside it — as switchable tabs. Each list is pulled
+ * from that repository's versioning.json, and every source can be installed on
+ * its own or as part of the whole list.
  *
  * Usage: node scripts/build-site.mjs [--folder=0.8]
  */
@@ -25,13 +21,13 @@ const ROOT = process.cwd();
 
 const DISCORD = "https://discord.com/invite/inkdex";
 
-/** The 0.9 repository, listed below this one. */
+/** The 0.9 repository, offered alongside this one. */
 const NEXT_VERSION = {
     name: "PoppingMango Extensions",
     label: "0.9",
     url: "https://poppingmangosources.github.io/general-extensions-mangago/0.9/test",
     github: "https://github.com/PoppingMangoSources/general-extensions-mangago",
-    note: "Built for Paperback 0.9. These will not load on 0.8.",
+    note: "For Paperback 0.9. These will not load on 0.8.",
 };
 
 async function main() {
@@ -47,22 +43,18 @@ async function main() {
 
     const pkg = JSON.parse(await readFile(path.join(ROOT, "package.json"), "utf8"));
     const versioning = JSON.parse(await readFile(versioningPath, "utf8"));
-    const baseUrl = resolveBaseUrl(pkg, folder);
 
-    // The brand artwork is shared with the README, so the page uses the same
-    // files rather than a second copy that could fall out of step.
     await cp(path.join(ROOT, "media"), path.join(bundles, "media"), { recursive: true });
 
     const current = {
         name: pkg.repositoryName ?? "PoppingMango Sources",
         label: folder === "" ? "0.8" : folder,
-        url: baseUrl,
+        url: resolveBaseUrl(pkg, folder),
         github: pkg.repository ?? "https://github.com/PoppingMangoSources/popmango-paperback-sources",
-        note: "Built for Paperback 0.8.",
-        // This card is served from the folder it describes, so its icons and
-        // its listing resolve against the page rather than an absolute URL.
-        // That keeps the page working on a branch preview, behind a custom
-        // domain, or opened straight off disk.
+        note: "For Paperback 0.8.",
+        // This tab is served from the folder it describes, so its icons and
+        // listing resolve against the page rather than an absolute URL. That
+        // keeps it working on a branch preview, a custom domain, or off disk.
         local: true,
         // Inlined so the list is there before any request finishes.
         sources: sortSources(versioning.sources),
@@ -72,9 +64,8 @@ async function main() {
     await writeFile(path.join(bundles, "index.html"), page({ pkg, repos, versioning }), "utf8");
     console.log(`Wrote ${path.relative(ROOT, path.join(bundles, "index.html"))} with ${current.sources.length} source(s).`);
 
-    // Keep GitHub Pages from running the published files through Jekyll,
-    // which would otherwise hide any folder whose name begins with an
-    // underscore.
+    // Keep Pages from running the published files through Jekyll, which would
+    // hide any folder whose name begins with an underscore.
     await writeFile(path.join(ROOT, "bundles", ".nojekyll"), "", "utf8");
 
     if (folder !== "") {
@@ -121,9 +112,6 @@ function escapeHtml(value) {
 function page({ pkg, repos, versioning }) {
     const title = pkg.repositoryName ?? "PoppingMango Sources";
     const built = versioning.buildTime ? new Date(versioning.buildTime) : undefined;
-
-    // The cards are rendered by the same code that later refreshes them, so
-    // the two can never drift apart.
     const data = JSON.stringify(repos).replace(/</g, "\\u003c");
 
     return `<!doctype html>
@@ -133,40 +121,50 @@ function page({ pkg, repos, versioning }) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(title)}</title>
 <meta name="description" content="${escapeHtml(pkg.description ?? "")}">
-<meta name="theme-color" content="#ffbbd5">
+<meta name="theme-color" content="#ffd9e6">
+<link rel="icon" href="data:image/svg+xml,${encodeURIComponent(mangoMark(32))}">
 <style>
 ${styles()}
 </style>
 </head>
 <body>
-<div class="bubbles" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+<div class="glow" aria-hidden="true"></div>
 
-<header class="hero">
-  <img class="hero__banner" src="./media/header.svg" alt="${escapeHtml(title)} — novels, manga, manhwa and manhua for Paperback 0.8">
-  <p class="hero__badges">
-    <img src="./media/badge-ios.svg" alt="iOS / iPadOS" height="26">
-    <img src="./media/badge-version.svg" alt="Paperback 0.8" height="26">
-    <img src="./media/badge-count.svg" alt="Source count" height="26">
-  </p>
-  <p class="hero__tagline">${escapeHtml(pkg.description ?? "")}</p>
+<header class="masthead">
+  <div class="brand">
+    <span class="brand__mark" aria-hidden="true">${mangoMark(44)}</span>
+    <span class="brand__text">
+      <span class="brand__name">PoppingMango</span>
+      <span class="brand__kind">Paperback sources</span>
+    </span>
+  </div>
+  <h1 class="masthead__title">Novels, manga,<br>manhwa &amp; manhua.</h1>
+  <p class="masthead__sub">Pick a version, then add the whole repository or just the sources you want.</p>
 </header>
 
-<main id="repos">
-  <p class="status">Loading repositories…</p>
+<main>
+  <div class="tabs" role="tablist" id="tabs"></div>
+  <section class="panel" id="panel"></section>
 </main>
 
 <footer class="footer">
+  <a class="footer__link" href="${escapeHtml(DISCORD)}">Support on Discord</a>
   <p>Made with <span class="footer__heart">♡</span> by Popmango</p>
   ${built ? `<p class="footer__built">Last built ${escapeHtml(built.toISOString().slice(0, 16).replace("T", " "))} UTC</p>` : ""}
 </footer>
 
 <script id="repo-data" type="application/json">${data}</script>
 <script>
-${script(DISCORD)}
+${script()}
 </script>
 </body>
 </html>
 `;
+}
+
+/** The mango mark, drawn inline so it needs no network request. */
+function mangoMark(size) {
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="${size}" height="${size}" role="img" aria-label="PoppingMango"><defs><linearGradient id="mg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffc98a"/><stop offset="1" stop-color="#ffa45c"/></linearGradient></defs><circle cx="24" cy="24" r="23" fill="#fff2f7"/><ellipse cx="24" cy="26" rx="13" ry="15" fill="url(#mg)"/><ellipse cx="19" cy="20" rx="4" ry="6" fill="#fff" opacity=".45"/><ellipse cx="31" cy="10" rx="7" ry="3.4" fill="#a8d48c" transform="rotate(24 31 10)"/><circle cx="34" cy="16" r="2.6" fill="#fff" opacity=".9"/></svg>`;
 }
 
 function rootRedirect(folder) {
@@ -179,19 +177,15 @@ function rootRedirect(folder) {
 <title>PoppingMango Sources</title>
 <link rel="canonical" href="${escapeHtml(target)}">
 </head>
-<body>
-<p>Taking you to <a href="${escapeHtml(target)}">the PoppingMango sources</a>…</p>
-</body>
+<body><p>Taking you to <a href="${escapeHtml(target)}">the PoppingMango sources</a>…</p></body>
 </html>
 `;
 }
 
-function script(discord) {
+function script() {
     return `
 (function () {
   "use strict";
-
-  var DISCORD = ${JSON.stringify(discord)};
 
   var RATING = {
     EVERYONE: { label: "Safe", tone: "safe" },
@@ -199,38 +193,31 @@ function script(discord) {
     ADULT: { label: "18+", tone: "adult" }
   };
 
-  var GITHUB_PATH = "M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 " +
-    "0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53." +
-    "63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 " +
-    "0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 " +
-    "2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 " +
-    "3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z";
+  var repos = JSON.parse(document.getElementById("repo-data").textContent);
+  var tabsEl = document.getElementById("tabs");
+  var panelEl = document.getElementById("panel");
+  var active = 0;
+  var filter = "";
 
-  function esc(value) {
-    return String(value == null ? "" : value)
+  function esc(v) {
+    return String(v == null ? "" : v)
       .replace(/&/g, "&amp;").replace(/</g, "&lt;")
       .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
 
-  function sortSources(sources) {
-    return (sources || []).filter(Boolean).slice().sort(function (a, b) {
+  function sortSources(list) {
+    return (list || []).filter(Boolean).slice().sort(function (a, b) {
       return String(a.name).localeCompare(String(b.name));
     });
   }
 
   // A repository served from this very folder is addressed relatively, so the
   // page keeps working on a branch preview, a custom domain, or off disk.
-  function base(repo) {
-    return repo.local ? "." : repo.url.replace(/\\/+$/, "");
-  }
+  function base(repo) { return repo.local ? "." : repo.url.replace(/\\/+$/, ""); }
 
-  function iconUrl(repo, source) {
-    return base(repo) + "/" + encodeURIComponent(source.id) +
-      "/includes/" + encodeURIComponent(source.icon || "icon.png");
-  }
-
-  function plural(count, word) {
-    return count + " " + word + (count === 1 ? "" : "s");
+  function iconUrl(repo, s) {
+    return base(repo) + "/" + encodeURIComponent(s.id) +
+      "/includes/" + encodeURIComponent(s.icon || "icon.png");
   }
 
   function addRepoLink(repo) {
@@ -241,106 +228,122 @@ function script(discord) {
   /**
    * Deep link that installs specific sources rather than the whole list.
    *
-   * The payload is a base64 list of [sourceId, repositoryUrl] pairs. Note it
+   * The payload is a base64 list of [sourceId, repositoryUrl] pairs. It always
    * carries the repository's real URL, never the relative one used for
-   * artwork — the app resolves it on its own and has no page to resolve
-   * against.
+   * artwork — the app has no page to resolve a relative one against.
    */
   function installLink(repo, ids) {
-    var pairs = ids.map(function (id) { return [id, repo.url]; });
-    return "paperback://installExtensions?data=" + btoa(JSON.stringify(pairs));
+    return "paperback://installExtensions?data=" +
+      btoa(JSON.stringify(ids.map(function (id) { return [id, repo.url]; })));
   }
 
-  /** One source, as its own install link. */
-  function sourceRow(repo, source) {
-    var badge = RATING[source.contentRating] || { label: source.contentRating || "", tone: "safe" };
+  function renderTabs() {
+    tabsEl.innerHTML = repos.map(function (repo, index) {
+      var count = repo.sources == null ? "" : '<b>' + repo.sources.length + '</b>';
+      return '<button class="tab' + (index === active ? " is-active" : "") + '" role="tab" ' +
+        'aria-selected="' + (index === active) + '" data-tab="' + index + '">' +
+        '<span class="tab__ver">' + esc(repo.label) + '</span>' + count + '</button>';
+    }).join("");
 
-    return '<a class="source" href="' + esc(installLink(repo, [source.id])) + '" ' +
-      'title="Install ' + esc(source.name) + '">' +
-      '<img class="source__icon" src="' + esc(iconUrl(repo, source)) + '" alt="" ' +
-      'width="40" height="40" loading="lazy" onerror="this.style.visibility=&quot;hidden&quot;">' +
-      '<span class="source__text">' +
-      '<span class="source__name">' + esc(source.name) + '</span>' +
-      '<span class="source__meta">v' + esc(source.version) +
-      '<span class="badge badge--' + badge.tone + '">' + esc(badge.label) + '</span></span>' +
+    Array.prototype.forEach.call(tabsEl.querySelectorAll("[data-tab]"), function (button) {
+      button.addEventListener("click", function () {
+        active = Number(button.getAttribute("data-tab"));
+        filter = "";
+        render();
+      });
+    });
+  }
+
+  function sourceCard(repo, s) {
+    var badge = RATING[s.contentRating] || { label: s.contentRating || "", tone: "safe" };
+
+    return '<a class="src" href="' + esc(installLink(repo, [s.id])) + '" title="Install ' + esc(s.name) + '">' +
+      '<img class="src__icon" src="' + esc(iconUrl(repo, s)) + '" alt="" width="48" height="48" ' +
+      'loading="lazy" onerror="this.style.visibility=&quot;hidden&quot;">' +
+      '<span class="src__body">' +
+        '<span class="src__name">' + esc(s.name) + '</span>' +
+        '<span class="src__meta"><span class="src__ver">v' + esc(s.version) + '</span>' +
+        '<span class="chip chip--' + badge.tone + '">' + esc(badge.label) + '</span></span>' +
       '</span>' +
-      '<span class="source__install">Install</span>' +
-      '</a>';
+      '<span class="src__go" aria-hidden="true">+</span>' +
+    '</a>';
   }
 
-  function repoCard(repo) {
-    var card = document.createElement("article");
-    card.className = "repo";
-
-    var sources = sortSources(repo.sources);
+  function render() {
+    var repo = repos[active];
     var known = repo.sources != null;
+    var list = known ? sortSources(repo.sources) : [];
+    var needle = filter.trim().toLowerCase();
+    var shown = needle ? list.filter(function (s) {
+      return String(s.name).toLowerCase().indexOf(needle) !== -1;
+    }) : list;
 
-    card.innerHTML =
-      '<div class="repo__head">' +
-        '<h2 class="repo__name">' + esc(repo.name) + '</h2>' +
-        '<div class="repo__meta">' +
-          '<span class="tag">' + esc(repo.label) + '</span>' +
-          '<span class="repo__url">' + esc(repo.url.replace(/^https?:\\/\\//, "")) + '</span>' +
+    renderTabs();
+
+    var body;
+    if (!known) {
+      body = '<p class="note">Loading sources…</p>';
+    } else if (list.length === 0) {
+      body = '<p class="note">Nothing published here yet. (｡•́︿•̀｡)</p>';
+    } else if (shown.length === 0) {
+      body = '<p class="note">No source matches “' + esc(filter) + '”.</p>';
+    } else {
+      body = '<div class="grid">' + shown.map(function (s) { return sourceCard(repo, s); }).join("") + '</div>';
+    }
+
+    panelEl.innerHTML =
+      '<div class="repo">' +
+        '<div class="repo__info">' +
+          '<p class="repo__note">' + esc(repo.note) + '</p>' +
+          '<p class="repo__url">' + esc(repo.url.replace(/^https?:\\/\\//, "")) + '</p>' +
         '</div>' +
-        '<div class="repo__actions">' +
-          '<a class="button button--add" href="' + esc(addRepoLink(repo)) + '">Add whole repository</a>' +
-          '<a class="iconbutton" href="' + esc(repo.github) + '" title="View on GitHub" aria-label="View on GitHub">' +
-            '<svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="' + GITHUB_PATH + '"/></svg>' +
-          '</a>' +
+        '<div class="repo__acts">' +
+          '<a class="btn btn--primary" href="' + esc(addRepoLink(repo)) + '">Add whole repository</a>' +
+          '<a class="btn btn--ghost" href="' + esc(repo.github) + '">GitHub</a>' +
         '</div>' +
-        '<a class="button button--discord" href="' + esc(DISCORD) + '">💬 Discord support</a>' +
-        '<p class="repo__note">' + esc(repo.note) + '</p>' +
       '</div>' +
-      '<details class="drawer" open>' +
-        '<summary class="drawer__toggle">' +
-          '<span class="drawer__count"><span class="drawer__emoji">🧁</span>' +
-            '<b data-count>' + (known ? plural(sources.length, "source") : "… sources") + '</b></span>' +
-          '<span class="drawer__hint"><span class="drawer__hide">tap to hide</span>' +
-            '<span class="drawer__show">tap to show</span></span>' +
-        '</summary>' +
-        '<p class="drawer__lead">Tap any source to install just that one.</p>' +
-        '<div class="sources" data-sources>' +
-          (known ? sources.map(function (s) { return sourceRow(repo, s); }).join("")
-                 : '<p class="status">Loading sources…</p>') +
-        '</div>' +
-      '</details>';
+      (known && list.length > 6
+        ? '<label class="search"><span class="search__icon" aria-hidden="true">⌕</span>' +
+          '<input id="filter" type="search" placeholder="Filter ' + list.length + ' sources" ' +
+          'value="' + esc(filter) + '" autocomplete="off"></label>'
+        : "") +
+      body;
 
-    load(card, repo);
-    return card;
+    var input = document.getElementById("filter");
+    if (input) {
+      input.addEventListener("input", function () {
+        filter = input.value;
+        var caret = input.selectionStart;
+        render();
+        var next = document.getElementById("filter");
+        if (next) { next.focus(); try { next.setSelectionRange(caret, caret); } catch (e) {} }
+      });
+    }
   }
 
-  function load(card, repo) {
-    var list = card.querySelector("[data-sources]");
-    var count = card.querySelector("[data-count]");
-
-    // Both repositories are on the same host, so this is same-origin.
+  /**
+   * Pulls a repository's list from the versioning.json it publishes.
+   *
+   * Both repositories sit on the same host, so this is same-origin; a repo
+   * elsewhere would rely on Pages sending permissive CORS headers, which it
+   * does.
+   */
+  function load(repo, index) {
     fetch(base(repo) + "/versioning.json", { cache: "no-cache" })
-      .then(function (response) {
-        if (!response.ok) throw new Error(String(response.status));
-        return response.json();
-      })
+      .then(function (r) { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
       .then(function (data) {
-        var sources = sortSources(data.sources);
-        count.textContent = plural(sources.length, "source");
-        list.innerHTML = sources.length === 0
-          ? '<p class="status">Nothing published here yet. (｡•́︿•̀｡)</p>'
-          : sources.map(function (s) { return sourceRow(repo, s); }).join("");
+        repo.sources = sortSources(data.sources);
+        if (index === active || repo.sources.length) render();
       })
       .catch(function () {
-        // Leave whatever was inlined at build time in place; only an empty
-        // list needs to say something went wrong.
-        if (!list.querySelector(".source")) {
-          list.innerHTML = '<p class="status">Could not reach this repository just now.</p>';
-          count.textContent = "— sources";
-        }
+        // Whatever was inlined at build time stands; an unknown list becomes
+        // an empty one so the tab can say so rather than spin forever.
+        if (repo.sources == null) { repo.failed = true; repo.sources = []; render(); }
       });
   }
 
-  var host = document.getElementById("repos");
-  var repos = JSON.parse(document.getElementById("repo-data").textContent);
-
-  host.innerHTML = "";
-  for (var i = 0; i < repos.length; i++) host.appendChild(repoCard(repos[i]));
+  render();
+  repos.forEach(load);
 })();
 `;
 }
@@ -348,9 +351,9 @@ function script(discord) {
 function styles() {
     return `
 /*
- * The palette is taken straight from the brand artwork: the blush-to-mango
- * sweep of the header, its mango and mint accents, and the deep plum the
- * lettering is set in.
+ * Palette taken from the brand artwork: the blush-to-mango sweep, its mango
+ * and leaf accents, and the deep plum the lettering is set in. Surfaces stay
+ * near-white so the covers and artwork carry the colour.
  */
 :root {
   color-scheme: light;
@@ -359,34 +362,36 @@ function styles() {
   --pink: #ffbbd5;
   --apricot: #ffcda8;
   --mango: #ffc17e;
-  --mango-deep: #ffa45c;
-  --mint: #cfebb4;
-  --mint-pale: #e6f6d8;
+  --mango-deep: #f08b3c;
   --leaf: #a8d48c;
+  --mint: #e6f6d8;
 
   --ink: #33162a;
-  --ink-soft: #8d6579;
-  --card: #ffffff;
-  --page: #fff6fa;
-  --page-2: #fff3ea;
-  --line: #ffe2ee;
-  --soft: #fff2f7;
+  --ink-2: #6d4a5e;
+  --ink-3: #9d7b8c;
 
-  --brand: linear-gradient(100deg, var(--blush) 0%, var(--pink) 34%, var(--apricot) 68%, var(--mango) 100%);
-  --shadow: 0 18px 34px -20px rgba(120, 45, 85, .45);
+  --surface: #ffffff;
+  --page: #fdf7f9;
+  --line: #f2e2ea;
+  --hover: #fff6fa;
+
+  --radius: 16px;
+  --shadow-sm: 0 1px 2px rgba(80, 30, 55, .06), 0 2px 8px -4px rgba(80, 30, 55, .10);
+  --shadow-md: 0 2px 4px rgba(80, 30, 55, .05), 0 12px 28px -14px rgba(80, 30, 55, .28);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
     --ink: #ffeaf4;
-    --ink-soft: #d2a8bf;
-    --card: #34212f;
-    --page: #241626;
-    --page-2: #2b1b26;
-    --line: #4b3143;
-    --soft: #3f2937;
-    --shadow: 0 18px 34px -20px rgba(0, 0, 0, .85);
+    --ink-2: #d8b6c8;
+    --ink-3: #a98598;
+    --surface: #2c2130;
+    --page: #201826;
+    --line: #402e3f;
+    --hover: #362839;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.3), 0 2px 8px -4px rgba(0,0,0,.5);
+    --shadow-md: 0 2px 4px rgba(0,0,0,.3), 0 12px 28px -14px rgba(0,0,0,.7);
   }
 }
 
@@ -394,221 +399,264 @@ function styles() {
 
 body {
   margin: 0;
-  padding: 0 1rem 3rem;
-  background: linear-gradient(168deg, var(--page) 0%, var(--page-2) 100%);
-  background-attachment: fixed;
+  padding: 0 1.25rem 4rem;
+  background: var(--page);
   color: var(--ink);
   font-family: ui-rounded, "SF Pro Rounded", "Quicksand", "Segoe UI", system-ui, sans-serif;
-  line-height: 1.55;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Soft drifting bubbles, echoing the ones in the header artwork. */
-.bubbles { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
-.bubbles span {
+/* One soft wash of brand colour behind the header, nothing more. */
+.glow {
   position: absolute;
-  border-radius: 50%;
-  opacity: .5;
-  animation: float 14s ease-in-out infinite;
+  inset: 0 0 auto;
+  height: 340px;
+  background:
+    radial-gradient(60% 120% at 15% 0%, var(--blush) 0%, transparent 60%),
+    radial-gradient(50% 110% at 88% 8%, var(--apricot) 0%, transparent 62%);
+  opacity: .85;
+  pointer-events: none;
+  z-index: 0;
 }
-.bubbles span:nth-child(1) { width: 130px; height: 130px; left: -40px;  top: 12%; background: var(--blush); }
-.bubbles span:nth-child(2) { width:  84px; height:  84px; right: -20px; top: 26%; background: var(--mint-pale); animation-delay: 2.5s; }
-.bubbles span:nth-child(3) { width: 160px; height: 160px; right: -60px; top: 58%; background: var(--apricot); animation-delay: 5s; }
-.bubbles span:nth-child(4) { width:  62px; height:  62px; left: 8%;     top: 74%; background: var(--pink); animation-delay: 7.5s; }
-.bubbles span:nth-child(5) { width: 100px; height: 100px; left: -30px;  top: 90%; background: var(--mango); animation-delay: 10s; }
+@media (prefers-color-scheme: dark) { .glow { opacity: .16; } }
 
-@keyframes float {
-  0%, 100% { transform: translateY(0) scale(1); }
-  50%      { transform: translateY(-26px) scale(1.06); }
+.masthead, main, .footer { position: relative; z-index: 1; max-width: 52rem; margin-inline: auto; }
+
+/* ---------- masthead ---------- */
+
+.masthead { padding: 2.5rem 0 1.75rem; }
+
+.brand { display: flex; align-items: center; gap: .7rem; margin-bottom: 1.5rem; }
+.brand__mark { display: flex; filter: drop-shadow(0 4px 10px rgba(240, 139, 60, .3)); }
+.brand__text { display: flex; flex-direction: column; line-height: 1.15; }
+.brand__name { font-weight: 800; font-size: 1.05rem; letter-spacing: -.01em; }
+.brand__kind { color: var(--ink-3); font-size: .8rem; font-weight: 600; }
+
+.masthead__title {
+  margin: 0 0 .6rem;
+  font-size: clamp(2rem, 6.5vw, 2.9rem);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -.025em;
 }
+.masthead__sub { margin: 0; max-width: 30rem; color: var(--ink-2); }
 
-main, .hero, .footer { position: relative; z-index: 1; max-width: 44rem; margin-inline: auto; }
+/* ---------- tabs ---------- */
 
-/* ---------- hero ---------- */
-
-.hero { text-align: center; padding: 1.75rem 0 1.5rem; }
-
-.hero__banner {
-  width: 100%;
-  height: auto;
-  border-radius: 1.6rem;
-  box-shadow: var(--shadow);
-}
-.hero__badges {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: .5rem;
-  margin: 1.1rem 0 .8rem;
-}
-.hero__badges img { height: 26px; width: auto; }
-.hero__tagline { margin: 0 auto; max-width: 27rem; color: var(--ink-soft); }
-
-/* ---------- repository card ---------- */
-
-.repo {
-  margin-bottom: 1.5rem;
-  border-radius: 1.6rem;
-  background: var(--card);
+.tabs {
+  display: inline-flex;
+  gap: .25rem;
+  padding: .25rem;
+  margin-bottom: 1.1rem;
+  border-radius: 999px;
+  background: var(--surface);
   border: 1px solid var(--line);
-  box-shadow: var(--shadow);
-  overflow: hidden;
+  box-shadow: var(--shadow-sm);
 }
 
-/* A ribbon of the brand gradient across the top of every card. */
-.repo::before { content: ""; display: block; height: 6px; background: var(--brand); }
-
-.repo__head { padding: 1.3rem 1.4rem 1.2rem; }
-.repo__name { margin: 0 0 .6rem; font-size: 1.45rem; font-weight: 800; line-height: 1.15; }
-
-.repo__meta { display: flex; align-items: center; gap: .6rem; margin-bottom: 1rem; }
-.repo__url { min-width: 0; color: var(--ink-soft); font-size: .85rem; word-break: break-all; }
-
-.tag {
-  flex: 0 0 auto;
-  padding: .1rem .8rem;
-  border-radius: 999px;
-  background: linear-gradient(120deg, var(--mint-pale), var(--mint));
-  color: #3f5f2c;
-  font-size: .85rem;
-  font-weight: 800;
-}
-
-.repo__actions { display: flex; align-items: center; gap: .6rem; }
-
-.button {
-  display: block;
-  padding: .8rem 1.4rem;
-  border-radius: 999px;
-  font-size: 1rem;
-  font-weight: 800;
-  text-align: center;
-  text-decoration: none;
-  color: var(--ink);
-  transition: transform .15s ease, filter .15s ease;
-}
-.button--add { flex: 1 1 auto; background: var(--brand); }
-.button--discord {
-  margin-top: .6rem;
-  background: linear-gradient(100deg, var(--mint-pale), var(--mint));
-  color: #3f5f2c;
-}
-.button:hover, .button:focus-visible { transform: translateY(-2px); filter: brightness(1.04); }
-.button:active { transform: translateY(1px); }
-
-.iconbutton {
-  flex: 0 0 auto;
+.tab {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 2.9rem;
-  height: 2.9rem;
-  border-radius: 50%;
-  background: var(--soft);
-  color: var(--mango-deep);
-  text-decoration: none;
-  transition: transform .15s ease;
+  gap: .45rem;
+  padding: .5rem 1.05rem;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--ink-2);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
 }
-.iconbutton:hover, .iconbutton:focus-visible { transform: translateY(-2px); }
+.tab:hover { color: var(--ink); }
+.tab.is-active {
+  background: linear-gradient(100deg, var(--pink), var(--mango));
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+.tab__ver::before { content: "Paperback "; font-weight: 600; opacity: .75; }
+.tab b {
+  min-width: 1.35rem;
+  padding: 0 .35rem;
+  border-radius: 999px;
+  background: rgba(51, 22, 42, .1);
+  font-size: .78rem;
+  text-align: center;
+}
+.tab.is-active b { background: rgba(255, 255, 255, .55); }
+@media (prefers-color-scheme: dark) {
+  .tab b { background: rgba(255,255,255,.1); }
+  .tab.is-active { color: #33162a; }
+}
 
-.repo__note { margin: .9rem 0 0; color: var(--ink-soft); font-size: .85rem; }
+/* ---------- repository strip ---------- */
 
-/* ---------- collapsible source list ---------- */
-
-.drawer { border-top: 1px dashed var(--line); }
-
-.drawer__toggle {
+.repo {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: .9rem 1.4rem;
-  cursor: pointer;
-  list-style: none;
-  user-select: none;
+  padding: 1.15rem 1.25rem;
+  margin-bottom: 1.1rem;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-sm);
 }
-.drawer__toggle::-webkit-details-marker { display: none; }
-.drawer__toggle:hover { background: var(--soft); }
+.repo__info { min-width: 0; }
+.repo__note { margin: 0; font-weight: 700; }
+.repo__url { margin: .15rem 0 0; color: var(--ink-3); font-size: .82rem; word-break: break-all; }
+.repo__acts { display: flex; gap: .5rem; flex: 1 1 auto; justify-content: flex-end; }
 
-.drawer__count { display: flex; align-items: center; gap: .45rem; color: var(--mango-deep); font-weight: 800; }
-.drawer__emoji { font-size: 1.1rem; }
-.drawer__hint { color: var(--ink-soft); font-size: .85rem; }
-
-/* Swap the hint text with the drawer's own state. */
-.drawer__show { display: inline; }
-.drawer__hide { display: none; }
-.drawer[open] .drawer__show { display: none; }
-.drawer[open] .drawer__hide { display: inline; }
-
-.drawer__lead { margin: 0 1.4rem .7rem; color: var(--ink-soft); font-size: .82rem; }
-
-.sources {
-  max-height: 22rem;
-  overflow-y: auto;
-  padding: 0 1.4rem 1.2rem;
-  scrollbar-width: thin;
-  scrollbar-color: var(--pink) transparent;
-  overscroll-behavior: contain;
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: .62rem 1.15rem;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: .92rem;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: transform .14s ease, filter .14s ease, background .14s ease;
 }
-.sources::-webkit-scrollbar { width: 8px; }
-.sources::-webkit-scrollbar-thumb { background: var(--pink); border-radius: 999px; }
+.btn--primary {
+  color: #33162a;
+  background: linear-gradient(100deg, var(--pink), var(--mango));
+  box-shadow: var(--shadow-sm);
+}
+.btn--ghost { color: var(--ink-2); background: var(--hover); border: 1px solid var(--line); }
+.btn:hover, .btn:focus-visible { transform: translateY(-1px); filter: brightness(1.03); }
+.btn:active { transform: translateY(0); }
 
-/* Each row is its own install link. */
-.source {
+@media (max-width: 32rem) {
+  .repo__acts { justify-content: stretch; }
+  .btn--primary { flex: 1 1 auto; }
+}
+
+/* ---------- filter ---------- */
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  padding: 0 1rem;
+  margin-bottom: 1rem;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-sm);
+}
+.search__icon { color: var(--ink-3); font-size: 1.1rem; }
+.search input {
+  flex: 1 1 auto;
+  padding: .68rem 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  outline: none;
+}
+.search input::placeholder { color: var(--ink-3); }
+
+/* ---------- source grid ---------- */
+
+.grid {
+  display: grid;
+  gap: .6rem;
+  grid-template-columns: repeat(auto-fill, minmax(15.5rem, 1fr));
+}
+
+.src {
   display: flex;
   align-items: center;
   gap: .8rem;
-  padding: .6rem .75rem;
-  margin-bottom: .5rem;
-  border-radius: 1.1rem;
+  padding: .7rem .85rem;
+  border-radius: var(--radius);
+  background: var(--surface);
   border: 1px solid var(--line);
+  box-shadow: var(--shadow-sm);
   color: inherit;
   text-decoration: none;
-  transition: transform .15s ease, border-color .15s ease, background .15s ease;
+  transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease;
 }
-.source:last-child { margin-bottom: 0; }
-.source:hover, .source:focus-visible {
-  transform: translateX(3px);
+.src:hover, .src:focus-visible {
+  transform: translateY(-2px);
   border-color: var(--pink);
-  background: var(--soft);
+  box-shadow: var(--shadow-md);
 }
 
-.source__icon {
+.src__icon {
   flex: 0 0 auto;
-  width: 40px;
-  height: 40px;
-  border-radius: .65rem;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
   object-fit: cover;
-  background: var(--soft);
+  background: var(--hover);
 }
-.source__text { min-width: 0; flex: 1 1 auto; }
-.source__name { display: block; font-weight: 800; }
-.source__meta { display: flex; align-items: center; gap: .45rem; color: var(--ink-soft); font-size: .8rem; }
-
-.source__install {
-  flex: 0 0 auto;
-  padding: .3rem .85rem;
-  border-radius: 999px;
-  background: var(--brand);
-  color: var(--ink);
-  font-size: .78rem;
+.src__body { min-width: 0; flex: 1 1 auto; display: block; }
+.src__name {
+  display: block;
   font-weight: 800;
+  letter-spacing: -.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.src__meta { display: flex; align-items: center; gap: .4rem; margin-top: .1rem; }
+.src__ver { color: var(--ink-3); font-size: .8rem; font-variant-numeric: tabular-nums; }
+
+.src__go {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 50%;
+  background: var(--hover);
+  color: var(--mango-deep);
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1;
+  transition: background .14s ease, color .14s ease;
+}
+.src:hover .src__go {
+  background: linear-gradient(100deg, var(--pink), var(--mango));
+  color: #33162a;
 }
 
-.badge { padding: .05rem .55rem; border-radius: 999px; font-size: .72rem; font-weight: 800; }
-.badge--safe   { background: var(--mint-pale); color: #43682f; }
-.badge--mature { background: #ffeccd; color: #8a5a14; }
-.badge--adult  { background: var(--pink); color: #7d2247; }
+.chip { padding: .04rem .5rem; border-radius: 999px; font-size: .7rem; font-weight: 800; }
+.chip--safe   { background: var(--mint); color: #45692f; }
+.chip--mature { background: #ffeccd; color: #8a5a14; }
+.chip--adult  { background: var(--blush); color: #96305e; }
+@media (prefers-color-scheme: dark) {
+  .chip--safe { background: #33472a; color: #cdeeb4; }
+  .chip--mature { background: #4d3a1c; color: #ffdca4; }
+  .chip--adult { background: #4e2439; color: #ffc3dd; }
+}
 
-.status { margin: .5rem 0 1rem; color: var(--ink-soft); font-size: .9rem; text-align: center; }
+.note {
+  padding: 2.25rem 1rem;
+  margin: 0;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px dashed var(--line);
+  color: var(--ink-3);
+  text-align: center;
+}
 
-.footer { margin-top: 2.5rem; text-align: center; color: var(--ink-soft); font-size: .85rem; }
+/* ---------- footer ---------- */
+
+.footer { margin-top: 3rem; text-align: center; color: var(--ink-3); font-size: .85rem; }
+.footer__link { display: inline-block; margin-bottom: .6rem; color: var(--mango-deep); font-weight: 700; }
+.footer p { margin: .15rem 0; }
 .footer__heart { color: var(--pink); }
-.footer__built { margin: .25rem 0 0; opacity: .75; }
+.footer__built { opacity: .7; }
 
 @media (prefers-reduced-motion: reduce) {
-  .bubbles span { animation: none; }
-  .button, .iconbutton, .source { transition: none; }
+  .btn, .src, .src__go, .tab { transition: none; }
 }
 `;
 }
