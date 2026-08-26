@@ -22,7 +22,7 @@ const outputPath = path.join(ROOT, "bundles", folder, "index.html");
 let html = await readFile(outputPath, "utf8");
 
 const heroDescription =
-    "Browse Popmango’s Paperback 0.9 and 0.8 repositories. If you installed Paperback from the App Store, you’re on 0.8. Extensions built for 0.8 also work in the 0.9 client, but 0.9 extensions do not work on 0.8.";
+    "Novels, manga, manhwa and manhua in one Popmango catalog. Choose the repository that matches your Paperback version, since 0.9 sources won’t work on 0.8.";
 
 html = html
     .replace(
