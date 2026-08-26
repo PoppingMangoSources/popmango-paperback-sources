@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright © 2026 Popmango */
+
 import type { Cookie, Request, Response, SourceInterceptor, SourceStateManager } from "@paperback/types";
 
 import { hostOf } from "./UrlBuilder";

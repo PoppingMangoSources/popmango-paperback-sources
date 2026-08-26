@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright © 2026 Popmango */
+
 import type { AnyNode } from "domhandler";
 import type { Cheerio, CheerioAPI } from "cheerio";
 

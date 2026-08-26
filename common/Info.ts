@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright © 2026 Popmango */
+
 import { BadgeColor, ContentRating as RuntimeContentRating, SourceIntents, type Badge, type SourceInfo } from "@paperback/types";
 
 import { ContentRating } from "./Types";

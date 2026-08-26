@@ -65,4 +65,8 @@ mapped to instead.
 
 ## Licence
 
-[MIT](LICENSE)
+[GNU General Public License v3.0 or later](LICENSE).
+
+Sources ported from the 0.9 repository keep the copyright notices they were
+published under, as that licence requires. Files written for this repository
+carry Popmango's own notice.
