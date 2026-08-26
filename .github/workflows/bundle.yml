@@ -56,6 +56,7 @@ jobs:
       - name: Build the repository site
         run: npm run site -- --folder=${{ steps.folder.outputs.name }}
 
+      # Keep the visual tweaks isolated from extension bundling.
       - name: Apply site presentation
         run: node scripts/customize-site.mjs --folder=${{ steps.folder.outputs.name }}
 
