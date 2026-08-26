@@ -36,6 +36,57 @@ export interface ResponseBody {
 /** Number of times a failed request is retried before the error is surfaced. */
 const DEFAULT_RETRIES = 2;
 
+const BASE64_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+/**
+ * Turns UTF-8 bytes into a string.
+ *
+ * Titles routinely carry accents and CJK, so decoding byte-by-byte would
+ * mangle them; multi-byte sequences are assembled properly and anything
+ * malformed becomes a replacement character rather than throwing.
+ */
+function utf8Decode(bytes: number[]): string {
+    let result = "";
+
+    for (let index = 0; index < bytes.length; ) {
+        const byte = bytes[index] ?? 0;
+        let codePoint: number;
+        let length: number;
+
+        if (byte < 0x80) {
+            codePoint = byte;
+            length = 1;
+        } else if ((byte & 0xe0) === 0xc0) {
+            codePoint = byte & 0x1f;
+            length = 2;
+        } else if ((byte & 0xf0) === 0xe0) {
+            codePoint = byte & 0x0f;
+            length = 3;
+        } else if ((byte & 0xf8) === 0xf0) {
+            codePoint = byte & 0x07;
+            length = 4;
+        } else {
+            result += "�";
+            index += 1;
+            continue;
+        }
+
+        if (index + length > bytes.length) {
+            result += "�";
+            break;
+        }
+
+        for (let offset = 1; offset < length; offset += 1) {
+            codePoint = (codePoint << 6) | ((bytes[index + offset] ?? 0) & 0x3f);
+        }
+
+        result += String.fromCodePoint(codePoint);
+        index += length;
+    }
+
+    return result;
+}
+
 /**
  * The source-wide entry point for making requests.
  *
@@ -107,6 +158,42 @@ class ApplicationRuntime {
      */
     decodeHTMLEntities(value: string): string {
         return decodeEntities(value);
+    }
+
+    /**
+     * Decodes standard or URL-safe base64 into a string.
+     *
+     * The runtime has no `atob`, and several sites hide their page manifests
+     * behind a base64 payload, so sources get their own decoder. Padding is
+     * optional and whitespace is ignored, which is how these payloads tend to
+     * arrive.
+     */
+    base64Decode(value: string): string {
+        const clean = value.replace(/[\r\n\s]/g, "").replace(/-/g, "+").replace(/_/g, "/");
+        let bits = 0;
+        let accumulator = 0;
+        const bytes: number[] = [];
+
+        for (const character of clean) {
+            if (character === "=") {
+                break;
+            }
+
+            const index = BASE64_ALPHABET.indexOf(character);
+            if (index === -1) {
+                throw new Error("The value is not valid base64.");
+            }
+
+            accumulator = (accumulator << 6) | index;
+            bits += 6;
+
+            if (bits >= 8) {
+                bits -= 8;
+                bytes.push((accumulator >> bits) & 0xff);
+            }
+        }
+
+        return utf8Decode(bytes);
     }
 
     /** Performs a request and parses the body as JSON. */
