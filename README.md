@@ -44,12 +44,13 @@ This repository holds the **0.8** extensions. The 0.9 versions live in their own
 
 <!-- sources:start -->
 
-**1 source:** 1 manga, manhwa & manhua, all available from `0.8`.
+**2 sources:** 2 manga, manhwa & manhua, all available from `0.8`.
 
 ### Manga, Manhwa & Manhua
 
 | Source | Site |
 | :----- | :--- |
+| <img src="https://cdn.jsdelivr.net/gh/PoppingMangoSources/popmango-paperback-sources@main/media/sources/bunmanga.png" width="22" align="top"/> **BunManga** | [bunmanga.com](https://bunmanga.com) |
 | <img src="https://cdn.jsdelivr.net/gh/PoppingMangoSources/popmango-paperback-sources@main/media/sources/cocomic.png" width="22" align="top"/> **Cocomic** | [cocomic.co](https://cocomic.co) |
 
 <!-- sources:end -->
