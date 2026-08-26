@@ -2,7 +2,7 @@
     "name": "popmango-paperback-sources",
     "version": "0.8.0",
     "private": true,
-    "repositoryName": "Popmango Sources",
+    "repositoryName": "PoppingMango Sources",
     "description": "Novels, manga, manhwa & manhua for Paperback 0.8 — maintained by Popmango.",
     "author": "Popmango",
     "license": "GPL-3.0-or-later",
@@ -11,6 +11,7 @@
     "noAddToPaperbackButton": true,
     "scripts": {
         "bundle": "paperback bundle",
+        "readme": "node scripts/update-readme.mjs",
         "serve": "paperback serve",
         "test": "paperback test",
         "typecheck": "tsc --noEmit",
