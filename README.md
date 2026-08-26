@@ -1,22 +1,22 @@
 <p align="center">
-  <img src="https://cdn.jsdelivr.net/gh/PoppingMangoSources/popmango-paperback-sources@main/media/header.svg?v=1" alt="PoppingMango Sources — Novels, Manga, Manhwa & Manhua for Paperback 0.8, maintained by Popmango" width="100%"/>
+  <img src="media/header.svg" alt="PoppingMango Sources — Novels, Manga, Manhwa & Manhua for Paperback 0.8, maintained by Popmango" width="100%"/>
 </p>
 
 <p align="center">
-  <img src="https://cdn.jsdelivr.net/gh/PoppingMangoSources/popmango-paperback-sources@main/media/badge-ios.svg?v=1" alt="iOS / iPadOS" height="28"/>
-  <img src="https://cdn.jsdelivr.net/gh/PoppingMangoSources/popmango-paperback-sources@main/media/badge-version.svg?v=1" alt="Paperback 0.8" height="28"/>
-  <img src="https://cdn.jsdelivr.net/gh/PoppingMangoSources/popmango-paperback-sources@main/media/badge-count.svg?v=1" alt="Source count" height="28"/>
+  <img src="media/badge-ios.svg" alt="iOS / iPadOS" height="28"/>
+  <img src="media/badge-version.svg" alt="Paperback 0.8" height="28"/>
+  <img src="media/badge-count.svg" alt="Source count" height="28"/>
 </p>
 
 <p align="center">
   <a href="https://poppingmangosources.github.io/popmango-paperback-sources/0.8/">
-    <img src="https://cdn.jsdelivr.net/gh/PoppingMangoSources/popmango-paperback-sources@main/media/button-add-08.svg?v=1" alt="Add PoppingMango 0.8 to Paperback" height="52"/>
+    <img src="media/button-add-08.svg" alt="Add PoppingMango 0.8 to Paperback" height="52"/>
   </a>
 </p>
 
 <p align="center">
   <a href="https://poppingmangosources.github.io/general-extensions-mangago/0.9/test/">
-    <img src="https://cdn.jsdelivr.net/gh/PoppingMangoSources/popmango-paperback-sources@main/media/button-add-09.svg?v=1" alt="Add PoppingMango 0.9 to Paperback" height="52"/>
+    <img src="media/button-add-09.svg" alt="Add PoppingMango 0.9 to Paperback" height="52"/>
   </a>
 </p>
 
@@ -50,10 +50,10 @@ This repository holds the **0.8** extensions. The 0.9 versions live in their own
 
 | Source | Site |
 | :----- | :--- |
-| <img src="https://cdn.jsdelivr.net/gh/PoppingMangoSources/popmango-paperback-sources@main/media/sources/bunmanga.png" width="22" align="top"/> **BunManga** | [bunmanga.com](https://bunmanga.com) |
-| <img src="https://cdn.jsdelivr.net/gh/PoppingMangoSources/popmango-paperback-sources@main/media/sources/cocomic.png" width="22" align="top"/> **Cocomic** | [cocomic.co](https://cocomic.co) |
-| <img src="https://cdn.jsdelivr.net/gh/PoppingMangoSources/popmango-paperback-sources@main/media/sources/likemanga.png" width="22" align="top"/> **LikeManga** | [likemanga.ink](https://likemanga.ink) |
-| <img src="https://cdn.jsdelivr.net/gh/PoppingMangoSources/popmango-paperback-sources@main/media/sources/vymanga.png" width="22" align="top"/> **VyManga** | [mangavyvy.net](https://mangavyvy.net) |
+| <img src="media/sources/bunmanga.png" width="22" align="top"/> **BunManga** | [bunmanga.com](https://bunmanga.com) |
+| <img src="media/sources/cocomic.png" width="22" align="top"/> **Cocomic** | [cocomic.co](https://cocomic.co) |
+| <img src="media/sources/likemanga.png" width="22" align="top"/> **LikeManga** | [likemanga.ink](https://likemanga.ink) |
+| <img src="media/sources/vymanga.png" width="22" align="top"/> **VyManga** | [mangavyvy.net](https://mangavyvy.net) |
 
 <!-- sources:end -->
 
@@ -65,7 +65,7 @@ pick the ones you want and install just those, rather than the whole list.
 
 <p align="center">
   <a href="https://discord.com/invite/inkdex">
-    <img src="https://cdn.jsdelivr.net/gh/PoppingMangoSources/popmango-paperback-sources@main/media/button-discord.svg?v=1" alt="Join the support Discord" height="36"/>
+    <img src="media/button-discord.svg" alt="Join the support Discord" height="36"/>
   </a>
 </p>
 
@@ -73,7 +73,7 @@ Source problems are handled in the [**OTHER-REPOS**](https://discord.com/channel
 
 <p align="center">
   <a href="https://discord.com/channels/965890377896845352/1367512880228077648">
-    <img src="https://cdn.jsdelivr.net/gh/PoppingMangoSources/popmango-paperback-sources@main/media/button-other-repos.svg?v=1" alt="Open the OTHER-REPOS Discord channel" height="36"/>
+    <img src="media/button-other-repos.svg" alt="Open the OTHER-REPOS Discord channel" height="36"/>
   </a>
 </p>
 

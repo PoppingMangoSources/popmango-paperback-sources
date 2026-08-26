@@ -16,8 +16,14 @@ import path from "node:path";
 
 const ROOT = process.cwd();
 
-/** Where the icons referenced by the tables are served from. */
-const ICON_BASE = "https://cdn.jsdelivr.net/gh/PoppingMangoSources/popmango-paperback-sources@main/media/sources";
+/**
+ * Where the icons referenced by the tables live.
+ *
+ * Repo-relative, so GitHub resolves them against the repository itself. A CDN
+ * URL would depend on that CDN having picked the branch up, which it does not
+ * always do promptly.
+ */
+const ICON_BASE = "media/sources";
 
 const START = "<!-- sources:start -->";
 const END = "<!-- sources:end -->";
