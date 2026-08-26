@@ -3,6 +3,7 @@
 
 import type { CheerioAPI } from "cheerio";
 import type {
+    DUISection,
     Chapter as RuntimeChapter,
     ChapterDetails as RuntimeChapterDetails,
     ChapterProviding,
@@ -37,7 +38,9 @@ import {
     InterceptorChain,
     PaperbackInterceptor,
 } from "./Interceptor";
+import { settingsMenu, type MenuSection } from "./Menu";
 import { Application } from "./Runtime";
+import { SettingsStore } from "./Settings";
 import type {
     Chapter,
     ChapterDetails,
@@ -54,6 +57,13 @@ import type {
 export interface SourceOptions {
     /** Front page of the site, used as the Cloudflare bypass target. */
     domain: string;
+    /**
+     * Setting keys this source stores.
+     *
+     * They have to be listed so their values can be read into memory before
+     * anything needs them; see `SettingsStore`.
+     */
+    settingsKeys?: readonly string[];
     /** Throttling. Left off, requests are not spaced out at all. */
     rateLimit?: { numberOfRequests: number; bufferInterval: number; ignoreImages?: boolean };
     /** The source's own interceptor, if it needs one. */
@@ -82,6 +92,14 @@ export abstract class PopmangoSource
     readonly stateManager: SourceStateManager;
     readonly cookieStorage: CookieStorageInterceptor;
 
+    /**
+     * The source's saved settings.
+     *
+     * Readable synchronously once loaded, which the base class arranges before
+     * any source method runs.
+     */
+    readonly settings: SettingsStore;
+
     private readonly domain: string;
 
     /**
@@ -104,6 +122,7 @@ export abstract class PopmangoSource
         this.domain = options.domain;
         this.stateManager = App.createSourceStateManager();
         this.cookieStorage = new CookieStorageInterceptor(this.stateManager);
+        this.settings = new SettingsStore(this.stateManager, options.settingsKeys ?? []);
 
         this.requestManager = App.createRequestManager({
             requestsPerSecond: options.rateLimit
@@ -167,6 +186,17 @@ export abstract class PopmangoSource
     /** The public URL of a series, for the share sheet. */
     getMangaShareUrl(mangaId: string): string {
         return `${this.domain}/${mangaId}`;
+    }
+
+    /**
+     * The source's settings screen, if it has one.
+     *
+     * Rows are built with the helpers in `Menu.ts` and read and write through
+     * `this.settings`. Returning `[]` means the source has no settings, and
+     * the app is told as much.
+     */
+    getSettingsSections(): MenuSection[] {
+        return [];
     }
 
     // ---------------------------------------------------------------------
@@ -236,6 +266,11 @@ export abstract class PopmangoSource
 
             return toPagedResults(page.items.map(toPartialFromSearch), page.metadata);
         });
+    }
+
+    async getSourceMenu(): Promise<DUISection> {
+        await this.settings.load();
+        return settingsMenu("Settings", () => this.getSettingsSections());
     }
 
     async getSearchTags(): Promise<RuntimeTagSection[]> {
@@ -326,6 +361,10 @@ export abstract class PopmangoSource
      */
     private async guard<T>(work: () => Promise<T>): Promise<T> {
         try {
+            // Settings are consulted from places that cannot wait — an
+            // interceptor rewriting a header, a URL being assembled — so they
+            // are in memory before any of that starts.
+            await this.settings.load();
             return await work();
         } catch (error: unknown) {
             this.rememberChallenge(error);

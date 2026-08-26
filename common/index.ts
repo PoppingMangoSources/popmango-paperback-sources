@@ -20,6 +20,8 @@ export {
 } from "./Interceptor";
 export { Application, assertOk, type RequestInit, type ResponseBody } from "./Runtime";
 export { PopmangoSource, type SourceOptions } from "./Source";
+export { SettingsStore, normaliseUrlOverride } from "./Settings";
+export { inputRow, labelRow, selectRow, settingsMenu, switchRow, type MenuSection } from "./Menu";
 export { URL, UrlBuilder, hostOf, resolveUrl } from "./UrlBuilder";
 export {
     ContentRating,
