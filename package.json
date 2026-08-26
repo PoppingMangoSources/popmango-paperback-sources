@@ -6,7 +6,7 @@
     "description": "Novels, manga, manhwa & manhua for Paperback 0.8 — maintained by Popmango.",
     "author": "Popmango",
     "license": "GPL-3.0-or-later",
-    "homepage": "https://poppingmangosources.github.io/popmango-paperback-sources/0.8",
+    "homepage": "https://poppingmangosources.github.io/popmango-paperback-sources/all",
     "repository": "https://github.com/PoppingMangoSources/popmango-paperback-sources",
     "noAddToPaperbackButton": true,
     "scripts": {
