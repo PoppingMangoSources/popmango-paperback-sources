@@ -1,11 +1,11 @@
 # dependencies
 node_modules/
 
-# build output
-bundles/
-lib/
-dist/
-tmp/
+# build output — anchored to the repo root so source folders are never caught
+/bundles/
+/lib/
+/dist/
+/tmp/
 *.tsbuildinfo
 
 # logs
