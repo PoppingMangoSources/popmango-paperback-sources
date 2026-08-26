@@ -1,0 +1,68 @@
+name: Bundle and publish sources
+
+on:
+  push:
+    branches:
+      - '**'
+      - '!gh-pages'
+  workflow_dispatch:
+
+concurrency:
+  group: publish-pages
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  bundle:
+    name: Bundle and publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the branch
+        uses: actions/checkout@v4
+
+      - name: Resolve the publish folder
+        id: folder
+        run: |
+          branch="${GITHUB_REF#refs/heads/}"
+          case "$branch" in
+            main) folder="0.8" ;;
+            *) folder="$(printf '%s' "$branch" | tr '/' '-')" ;;
+          esac
+          echo "name=$folder" >> "$GITHUB_OUTPUT"
+          echo "Publishing to /$folder"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check out the published site
+        uses: actions/checkout@v4
+        continue-on-error: true
+        with:
+          ref: gh-pages
+          path: bundles
+
+      - name: Bundle the sources
+        run: npm run bundle -- --folder=${{ steps.folder.outputs.name }}
+
+      - name: Build the repository site
+        run: npm run site -- --folder=${{ steps.folder.outputs.name }}
+
+      - name: Publish to GitHub Pages
+        run: |
+          cd bundles
+          rm -rf .git
+          git init -q -b gh-pages
+          git config user.name "PoppingMangoSources"
+          git config user.email "ikjot97@hotmail.com"
+          git add -A
+          git commit -q -m "Publish bundles for ${{ steps.folder.outputs.name }}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" gh-pages

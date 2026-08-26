@@ -1,0 +1,33 @@
+name: Checks
+
+on:
+  push:
+    branches:
+      - '**'
+      - '!gh-pages'
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  typecheck:
+    name: Type check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Bundle
+        run: npm run bundle

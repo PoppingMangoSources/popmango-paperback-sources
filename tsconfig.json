@@ -1,0 +1,27 @@
+{
+    "compilerOptions": {
+        "target": "ES2017",
+        "module": "ES2015",
+        "moduleResolution": "bundler",
+        "rootDir": "./src",
+        "outDir": "./lib",
+        "resolveJsonModule": true,
+        "esModuleInterop": true,
+        "forceConsistentCasingInFileNames": true,
+        "skipLibCheck": true,
+        "noEmit": true,
+
+        "strict": true,
+        "noImplicitAny": true,
+        "strictNullChecks": true,
+        "strictFunctionTypes": true,
+        "noImplicitThis": true,
+        "alwaysStrict": true,
+        "noImplicitOverride": true,
+        "noImplicitReturns": true,
+        "noFallthroughCasesInSwitch": true,
+        "noUncheckedIndexedAccess": true
+    },
+    "include": ["src/**/*.ts"],
+    "exclude": ["node_modules", "bundles", "lib"]
+}

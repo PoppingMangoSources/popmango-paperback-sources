@@ -1,0 +1,45 @@
+name: Remove published sources for a deleted branch
+
+on:
+  delete:
+
+concurrency:
+  group: publish-pages
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    name: Remove published bundles
+    if: github.event.ref_type == 'branch' && github.event.ref != 'main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Resolve the published folder
+        id: folder
+        run: |
+          folder="$(printf '%s' "${{ github.event.ref }}" | tr '/' '-')"
+          echo "name=$folder" >> "$GITHUB_OUTPUT"
+          echo "Removing /$folder"
+
+      - name: Check out the published site
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: bundles
+
+      - name: Drop the folder and republish
+        run: |
+          cd bundles
+          if [ ! -d "${{ steps.folder.outputs.name }}" ]; then
+            echo "Nothing published for this branch."
+            exit 0
+          fi
+          rm -rf "${{ steps.folder.outputs.name }}"
+          git config user.name "PoppingMangoSources"
+          git config user.email "ikjot97@hotmail.com"
+          git add -A
+          git commit -q -m "Remove bundles for ${{ steps.folder.outputs.name }}"
+          git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" gh-pages

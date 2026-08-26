@@ -1,0 +1,29 @@
+{
+    "name": "popmango-paperback-sources",
+    "version": "0.8.0",
+    "private": true,
+    "repositoryName": "Popmango Sources",
+    "description": "Novels, manga, manhwa & manhua for Paperback 0.8 — maintained by Popmango.",
+    "author": "Popmango",
+    "license": "MIT",
+    "homepage": "https://poppingmangosources.github.io/popmango-paperback-sources/0.8",
+    "repository": "https://github.com/PoppingMangoSources/popmango-paperback-sources",
+    "noAddToPaperbackButton": true,
+    "scripts": {
+        "bundle": "paperback bundle",
+        "serve": "paperback serve",
+        "test": "paperback test",
+        "typecheck": "tsc --noEmit",
+        "site": "node scripts/build-site.mjs"
+    },
+    "dependencies": {
+        "@paperback/toolchain": "0.8.7",
+        "@paperback/types": "0.8.7",
+        "cheerio": "^1.0.0-rc.12",
+        "html-entities": "^2.5.2"
+    },
+    "devDependencies": {
+        "@types/node": "^22.10.2",
+        "typescript": "^5.7.2"
+    }
+}
