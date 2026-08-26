@@ -1,41 +1,84 @@
-# Popmango Sources — Paperback 0.8
+<p align="center">
+  <img src="https://cdn.jsdelivr.net/gh/PoppingMangoSources/popmango-paperback-sources@main/media/header.svg?v=1" alt="PoppingMango Sources — Novels, Manga, Manhwa & Manhua for Paperback 0.8, maintained by Popmango" width="100%"/>
+</p>
 
-Novels, manga, manhwa & manhua extensions for **Paperback 0.8**.
+<p align="center">
+  <img src="https://cdn.jsdelivr.net/gh/PoppingMangoSources/popmango-paperback-sources@main/media/badge-ios.svg?v=1" alt="iOS / iPadOS" height="28"/>
+  <img src="https://cdn.jsdelivr.net/gh/PoppingMangoSources/popmango-paperback-sources@main/media/badge-version.svg?v=1" alt="Paperback 0.8" height="28"/>
+  <img src="https://cdn.jsdelivr.net/gh/PoppingMangoSources/popmango-paperback-sources@main/media/badge-count.svg?v=1" alt="Source count" height="28"/>
+</p>
 
-These are the Popmango sources, rebuilt against the 0.8 extension API. The
-0.9 versions live in a separate repository; this one exists because 0.8 and
-0.9 are different enough that a 0.9 bundle simply will not load on 0.8.
+<p align="center">
+  <a href="https://poppingmangosources.github.io/popmango-paperback-sources/0.8/">
+    <img src="https://cdn.jsdelivr.net/gh/PoppingMangoSources/popmango-paperback-sources@main/media/button-add-08.svg?v=1" alt="Add PoppingMango 0.8 to Paperback" height="52"/>
+  </a>
+</p>
 
-## Adding the repository
+<p align="center">
+  <a href="https://poppingmangosources.github.io/general-extensions-mangago/0.9/test/">
+    <img src="https://cdn.jsdelivr.net/gh/PoppingMangoSources/popmango-paperback-sources@main/media/button-add-09.svg?v=1" alt="Add PoppingMango 0.9 to Paperback" height="52"/>
+  </a>
+</p>
 
-Open this link on a device with Paperback 0.8 installed:
+<p align="center">
+  On iPhone or iPad, tap the button for the version you run and add the repository from the page that opens.<br/>
+  To add it by hand, open Paperback, go to <b>Settings → Extensions → Add Repository</b>, and paste:
+</p>
 
-**<https://poppingmangosources.github.io/popmango-paperback-sources/0.8>**
+<p align="center">
+  <code>https://poppingmangosources.github.io/popmango-paperback-sources/0.8/</code>
+</p>
 
-Or, inside the app: **Settings → Extensions → Add Repository**, then paste the
-URL above.
+---
 
-## Repository layout
+**PoppingMango** is an independent source list for [Paperback](https://paperback.moe) covering novels, manga, manhwa, and manhua, maintained by Popmango.
 
-```
-src/
-  lib/            shared runtime the sources are written against
-  <SourceName>/
-    <SourceName>.ts   entry point: source info + extension class
-    models.ts         constants, ids and local types
-    network.ts        request building and fetching
-    parsers.ts        HTML/JSON to model conversion
-    includes/icon.png source icon (required by the bundler)
-scripts/
-  build-site.mjs  generates the repository homepage after bundling
-website/
-  the homepage template and assets
-```
+This repository holds the **0.8** extensions. The 0.9 versions live in their own repository — the two app versions load different formats, so a 0.9 bundle will not run on 0.8 and the other way round. Add whichever matches your app, or add both and let each one pick up what it can use.
 
-Every source folder must contain a `<SourceName>.ts` matching its directory
-name and an `includes/icon.png`, otherwise the bundler skips it.
+| Repository | What it is |
+| :--------- | :--------- |
+| **[Paperback 0.8 Sources](https://github.com/PoppingMangoSources/popmango-paperback-sources)** | This repository. Extensions rebuilt against the 0.8 extension API. |
+| **[Paperback 0.9 Sources](https://github.com/PoppingMangoSources/general-extensions-mangago)** | 28 extensions for Paperback 0.9, the list kept most current. |
 
-## Working on the sources
+## Sources
+
+<!-- sources:start -->
+
+**1 source:** 1 manga, manhwa & manhua, all available from `0.8`.
+
+### Manga, Manhwa & Manhua
+
+| Source | Site |
+| :----- | :--- |
+| <img src="https://cdn.jsdelivr.net/gh/PoppingMangoSources/popmango-paperback-sources@main/media/sources/cocomic.png" width="22" align="top"/> **Cocomic** | [cocomic.co](https://cocomic.co) |
+
+<!-- sources:end -->
+
+Every source can also be installed on its own from the
+[repository page](https://poppingmangosources.github.io/popmango-paperback-sources/0.8/) —
+pick the ones you want and install just those, rather than the whole list.
+
+## Support
+
+<p align="center">
+  <a href="https://discord.com/invite/inkdex">
+    <img src="https://cdn.jsdelivr.net/gh/PoppingMangoSources/popmango-paperback-sources@main/media/button-discord.svg?v=1" alt="Join the support Discord" height="36"/>
+  </a>
+</p>
+
+Source problems are handled in the [**OTHER-REPOS**](https://discord.com/channels/965890377896845352/1367512880228077648) channel of the linked Discord, where the PoppingMango support chat lives.
+
+<p align="center">
+  <a href="https://discord.com/channels/965890377896845352/1367512880228077648">
+    <img src="https://cdn.jsdelivr.net/gh/PoppingMangoSources/popmango-paperback-sources@main/media/button-other-repos.svg?v=1" alt="Open the OTHER-REPOS Discord channel" height="36"/>
+  </a>
+</p>
+
+Include the affected source, the page or title that failed, and screenshots or request details when possible, it makes fixes much faster.
+
+**A new source you'd like added** — open an [issue](https://github.com/PoppingMangoSources/popmango-paperback-sources/issues) under the **source request** label. Requests only, and no promises about which ones get built.
+
+## Building
 
 ```bash
 npm install          # install the toolchain
@@ -45,28 +88,14 @@ npm run serve        # serve the bundles for on-device testing
 npm test             # run the source test suite
 ```
 
-Bundles are published automatically. Pushing to `main` publishes to `/0.8`;
-pushing to any other branch publishes to a folder named after that branch, so
-work in progress can be installed without disturbing the stable repository.
-Deleting a branch removes its folder again.
+Bundles are published automatically. Pushing to `main` publishes to `/0.8`; pushing to any other branch publishes to a folder named after that branch, so work in progress can be installed without disturbing the stable repository. Deleting a branch removes its folder again.
 
-## About the 0.9 → 0.8 conversion
+Repository layout, and what changes when a source is rebuilt for 0.8, are covered in [`docs/CONVERSION.md`](docs/CONVERSION.md). `common/` is a small runtime that implements the 0.8 extension interfaces on top of the newer model vocabulary, which is what keeps each source's parsers close to their 0.9 originals.
 
-`src/lib` is a small compatibility runtime. It exposes the helpers the 0.9
-sources were written against — a request scheduler, an interceptor base class,
-a URL builder, a Cloudflare guard, a rate limiter, cookie storage — implemented
-on top of the 0.8 primitives. Because of it, a source's `network.ts` and
-`parsers.ts` carry over from 0.9 largely unchanged, and only the entry point
-needs real work.
+## Disclaimer
 
-The parts of the 0.9 API that 0.8 has no equivalent for are documented in
-[`docs/CONVERSION.md`](docs/CONVERSION.md), together with what each one is
-mapped to instead.
+These extensions are **not** affiliated with Paperback or any supported website. All site names and logos belong to their respective owners.
 
 ## Licence
 
-[GNU General Public License v3.0 or later](LICENSE).
-
-Sources ported from the 0.9 repository keep the copyright notices they were
-published under, as that licence requires. Files written for this repository
-carry Popmango's own notice.
+[GNU General Public License v3.0 or later](LICENSE). Sources rebuilt from the 0.9 repository keep the copyright notices they were published under, as that licence requires; files written for this repository carry Popmango's own notice.

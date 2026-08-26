@@ -11,7 +11,7 @@
 export { CloudflareError, headerValue, isCloudflareChallenge } from "./Cloudflare";
 export { parseChapterNumber, parseDate } from "./Dates";
 export { DiscoverSectionType } from "./Types";
-export { Capability, sourceInfo, type SourceDescription } from "./Info";
+export { Capability, SourceKind, sourceInfo, type SourceDescription } from "./Info";
 export {
     BasicRateLimiter,
     CookieStorageInterceptor,

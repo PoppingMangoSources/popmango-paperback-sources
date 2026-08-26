@@ -27,6 +27,12 @@ const INTENT_FOR: Record<Capability, SourceIntents> = {
     [Capability.TRACKING]: SourceIntents.MANGA_TRACKING,
 };
 
+/** What a source mostly carries. Only used to group the listings. */
+export enum SourceKind {
+    COMIC = "Comics",
+    NOVEL = "Novels",
+}
+
 /** Everything a source declares about itself. */
 export interface SourceDescription {
     name: string;
@@ -37,6 +43,8 @@ export interface SourceDescription {
     contentRating: ContentRating;
     capabilities: Capability[];
     language?: string;
+    /** Defaults to comics, which is what most of these are. */
+    kind?: SourceKind;
     badges?: Badge[];
 }
 
@@ -54,6 +62,9 @@ export function sourceInfo(description: SourceDescription): SourceInfo {
     );
 
     const badges: Badge[] = [...(description.badges ?? [])];
+    if (description.kind === SourceKind.NOVEL) {
+        badges.unshift({ text: SourceKind.NOVEL, type: BadgeColor.BLUE });
+    }
     if (description.language !== undefined) {
         badges.unshift({ text: description.language, type: BadgeColor.GREY });
     }
