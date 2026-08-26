@@ -28,7 +28,7 @@ jobs:
         run: |
           branch="${GITHUB_REF#refs/heads/}"
           case "$branch" in
-            main) folder="all" ;;
+            main) folder="0.8" ;;
             *) folder="$(printf '%s' "$branch" | tr '/' '-')" ;;
           esac
           echo "name=$folder" >> "$GITHUB_OUTPUT"
@@ -56,28 +56,15 @@ jobs:
       - name: Build the repository site
         run: npm run site -- --folder=${{ steps.folder.outputs.name }}
 
-      # Keep the visual tweaks isolated from extension bundling.
       - name: Apply site presentation
         run: node scripts/customize-site.mjs --folder=${{ steps.folder.outputs.name }}
 
-      - name: Preserve the old 0.8 repository URL
-        if: github.ref_name == 'main'
+      - name: Mirror the combined catalog to all
         run: |
-          rm -rf bundles/0.8
-          cp -R bundles/all bundles/0.8
-          cat > bundles/0.8/index.html <<'HTML'
-          <!doctype html>
-          <html lang="en">
-          <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1">
-          <meta http-equiv="refresh" content="0; url=../all/">
-          <link rel="canonical" href="../all/">
-          <title>PoppingMango Sources</title>
-          </head>
-          <body><p>Taking you to <a href="../all/">PoppingMango Sources</a>…</p></body>
-          </html>
-          HTML
+          if [ "$GITHUB_REF_NAME" = "main" ]; then
+            rm -rf bundles/all
+            cp -R bundles/0.8 bundles/all
+          fi
 
       - name: Publish to GitHub Pages
         run: |
