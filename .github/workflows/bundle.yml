@@ -1,5 +1,6 @@
 name: Bundle and publish sources
 
+# Publishing workflow for the combined 0.8/0.9 source garden.
 on:
   push:
     branches:
