@@ -141,3 +141,13 @@ export function resolveUrl(href: string, base: string): string {
 export function hostOf(url: string): string {
     return url.match(/^[a-z][a-z0-9+.-]*:\/\/([^/:?#]+)/i)?.[1] ?? "";
 }
+
+/**
+ * Returns the scheme, host and port of a URL, and nothing else.
+ *
+ * A source that can talk to several mirrors compares this against the list it
+ * knows to work out which one a link belongs to.
+ */
+export function originOf(url: string): string {
+    return url.match(/^[a-z][a-z0-9+.-]*:\/\/[^/?#]+/i)?.[0] ?? "";
+}

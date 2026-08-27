@@ -22,7 +22,7 @@ export { Application, assertOk, type RequestInit, type ResponseBody } from "./Ru
 export { PopmangoSource, type SourceOptions } from "./Source";
 export { SettingsStore, normaliseUrlOverride } from "./Settings";
 export { inputRow, labelRow, selectRow, settingsMenu, switchRow, type MenuSection } from "./Menu";
-export { URL, UrlBuilder, hostOf, resolveUrl } from "./UrlBuilder";
+export { URL, UrlBuilder, hostOf, originOf, resolveUrl } from "./UrlBuilder";
 export {
     ContentRating,
     MangaStatus,
