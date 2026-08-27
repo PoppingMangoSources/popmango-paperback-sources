@@ -49,12 +49,12 @@ async function main() {
     await writeFile(path.join(ROOT, "README.md"), readme, "utf8");
     await Promise.all([
         writeFile(
-            path.join(ROOT, "media", "badge-count-08-compact.svg"),
+            path.join(ROOT, "media", "badge-count-08-balanced.svg"),
             countBadge(current.length, "0.8", "mint"),
             "utf8",
         ),
         writeFile(
-            path.join(ROOT, "media", "badge-count-09-compact.svg"),
+            path.join(ROOT, "media", "badge-count-09-balanced.svg"),
             countBadge(next.length, "0.9", "peach"),
             "utf8",
         ),
@@ -145,17 +145,17 @@ function countBadge(count, version, palette) {
     const colors = palette === "mint"
         ? { start: "#dff3cb", end: "#b9e6df", bubble: "#ffd0a8" }
         : { start: "#f6b7d6", end: "#ffd0a8", bubble: "#c9eadf" };
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="240" height="56" viewBox="0 0 240 56" role="img" aria-label="${count} Paperback ${version} sources">
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="250" height="56" viewBox="0 0 250 56" role="img" aria-label="${count} Paperback ${version} sources">
   <defs>
     <linearGradient id="catalog-${version.replace(".", "")}" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0" stop-color="${colors.start}"/>
       <stop offset="1" stop-color="${colors.end}"/>
     </linearGradient>
   </defs>
-  <rect width="240" height="56" rx="20" fill="url(#catalog-${version.replace(".", "")})"/>
-  <text x="88" y="35" text-anchor="middle" font-family="'Quicksand', 'Nunito', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" font-weight="800" letter-spacing="1.2" fill="#33162a">${version} SOURCES</text>
-  <circle cx="202" cy="28" r="20" fill="${colors.bubble}"/>
-  <text x="202" y="35" text-anchor="middle" font-family="'Quicksand', 'Nunito', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" font-weight="850" fill="#33162a">${count}</text>
+  <rect width="250" height="56" rx="20" fill="url(#catalog-${version.replace(".", "")})"/>
+  <text x="99" y="35" text-anchor="middle" font-family="'Quicksand', 'Nunito', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" font-weight="800" letter-spacing="1.2" fill="#33162a">${version} SOURCES</text>
+  <circle cx="212" cy="28" r="20" fill="${colors.bubble}"/>
+  <text x="212" y="35" text-anchor="middle" font-family="'Quicksand', 'Nunito', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" font-weight="850" fill="#33162a">${count}</text>
 </svg>
 `;
 }
