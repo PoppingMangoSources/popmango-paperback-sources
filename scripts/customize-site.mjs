@@ -105,10 +105,9 @@ const presentationStyles = `
   top: .45rem;
   right: .08rem;
   bottom: .45rem;
-  width: .36rem;
+  width: .28rem;
   border-radius: 999px;
-  background: #f1e6fb;
-  box-shadow: inset 0 0 0 1px rgba(148, 92, 202, .08);
+  background: #fff;
   pointer-events: none;
 }
 .source-scroll__rail[hidden] { display: none; }
@@ -117,8 +116,8 @@ const presentationStyles = `
   width: 100%;
   min-height: 2.6rem;
   border-radius: 999px;
-  background: linear-gradient(180deg, #c77bea, #8d62d8);
-  box-shadow: 0 2px 8px rgba(125, 74, 190, .32);
+  background: linear-gradient(180deg, rgba(247, 137, 193, .72), rgba(225, 105, 171, .56));
+  box-shadow: 0 1px 5px rgba(210, 88, 155, .14);
   will-change: transform;
 }
 

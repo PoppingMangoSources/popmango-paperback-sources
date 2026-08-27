@@ -1,11 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="300" height="60" viewBox="0 0 300 60" role="img" aria-label="iOS and iPadOS">
   <defs>
     <radialGradient id="pbubble" cx="0.34" cy="0.3" r="0.75">
-      <stop offset="0" stop-color="#ffeaf3"/>
-      <stop offset="1" stop-color="#ff9fc3"/>
+      <stop offset="0" stop-color="#fff0f7"/>
+      <stop offset="1" stop-color="#ee94c2"/>
     </radialGradient>
   </defs>
-  <rect x="1.5" y="1.5" width="297" height="57" rx="28.5" fill="#ffd5e7" stroke="#ff9fc3" stroke-width="3"/>
+  <rect x="1.5" y="1.5" width="297" height="57" rx="28.5" fill="#f8c9e0" stroke="#e98bbb" stroke-width="3"/>
   <g>
     <circle cx="39" cy="29" r="13" fill="url(#pbubble)"/>
     <circle cx="34" cy="24" r="3.5" fill="#ffffff"/>

@@ -135,22 +135,18 @@ function sourceWebsite(source, paperbackVersion) {
 }
 
 function countBadge(current, next) {
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="410" height="60" viewBox="0 0 410 60" role="img" aria-label="${current} Paperback 0.8 sources and ${next} Paperback 0.9 sources">
+    const total = current + next;
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="245" height="60" viewBox="0 0 245 60" role="img" aria-label="${total} sources">
   <defs>
-    <linearGradient id="catalog-gradient" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#ffbbd5"/>
-      <stop offset=".52" stop-color="#ffc98a"/>
-      <stop offset="1" stop-color="#b7e2ce"/>
+    <linearGradient id="catalog" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#dff3cb"/>
+      <stop offset="1" stop-color="#b9e6df"/>
     </linearGradient>
   </defs>
-  <rect x="1.5" y="1.5" width="407" height="57" rx="28.5" fill="#fff8ef" stroke="url(#catalog-gradient)" stroke-width="3"/>
-  <text x="34" y="38" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="800" fill="#33162a">SOURCES</text>
-  <circle cx="194" cy="30" r="21" fill="#ffbbd5"/>
-  <text x="194" y="38" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" font-weight="800" fill="#33162a">${current}</text>
-  <text x="228" y="37" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#6d4a5e">0.8</text>
-  <circle cx="317" cy="30" r="21" fill="#b7e2ce"/>
-  <text x="317" y="38" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" font-weight="800" fill="#33162a">${next}</text>
-  <text x="351" y="37" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#6d4a5e">0.9</text>
+  <rect x="1.5" y="1.5" width="242" height="57" rx="28.5" fill="url(#catalog)" stroke="#9fd4c9" stroke-width="3"/>
+  <text x="92" y="38" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="21" font-weight="800" letter-spacing="2" fill="#33162a">SOURCES</text>
+  <circle cx="199" cy="30" r="21" fill="#f3acd0"/>
+  <text x="199" y="38" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" font-weight="850" fill="#33162a">${total}</text>
 </svg>
 `;
 }

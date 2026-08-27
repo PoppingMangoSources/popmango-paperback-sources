@@ -1,16 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="400" height="60" viewBox="0 0 400 60" role="img" aria-label="Paperback 0.8 and 0.9">
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="60" viewBox="0 0 320 60" role="img" aria-label="Paperback 0.8 and 0.9">
   <defs>
-    <linearGradient id="mangodot" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#ffc98a"/>
-      <stop offset="1" stop-color="#ffa45c"/>
+    <linearGradient id="version" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffd3e7"/>
+      <stop offset="0.55" stop-color="#e3c3ef"/>
+      <stop offset="1" stop-color="#b9e6df"/>
     </linearGradient>
   </defs>
-  <rect x="1.5" y="1.5" width="397" height="57" rx="28.5" fill="#ffe0be" stroke="#ffb068" stroke-width="3"/>
-  <g transform="translate(39,30)">
-    <ellipse cx="0" cy="1" rx="11" ry="13" fill="url(#mangodot)"/>
-    <ellipse cx="-3.5" cy="-3" rx="3.5" ry="5" fill="#ffffff" opacity="0.5"/>
-    <ellipse cx="8" cy="-14" rx="6" ry="3" fill="#a8d48c" transform="rotate(24 8 -14)"/>
-    <circle cx="18" cy="-9" r="3.5" fill="#ffffff" opacity="0.95"/>
-  </g>
-  <text x="228" y="38" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="24" font-weight="700" letter-spacing="3" fill="#33162a">PAPERBACK 0.8 + 0.9</text>
+  <rect x="1.5" y="1.5" width="317" height="57" rx="28.5" fill="url(#version)" stroke="#d99bcb" stroke-width="3"/>
+  <text x="160" y="38" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="21" font-weight="750" letter-spacing="2.2" fill="#33162a">PAPERBACK 0.8 / 0.9</text>
 </svg>

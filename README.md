@@ -4,25 +4,19 @@
 
 <p align="center">
   <img src="media/badge-ios.svg" alt="iOS / iPadOS" height="28"/>
-  <img src="media/badge-version.svg" alt="Paperback 0.8 + 0.9" height="28"/>
-  <img src="media/badge-count.svg" alt="4 Paperback 0.8 sources and 28 Paperback 0.9 sources" height="28"/>
-</p>
-
-<p align="center">
-  <a href="https://poppingmangosources.github.io/general-extensions-mangago/0.9/test/">
-    <img src="media/button-add-09.svg" alt="Add PoppingMango 0.9 to Paperback" height="52"/>
-  </a>
+  <img src="media/badge-version.svg" alt="Paperback 0.8 / 0.9" height="28"/>
+  <img src="media/badge-count.svg" alt="32 sources" height="28"/>
 </p>
 
 <p align="center">
   <a href="https://poppingmangosources.github.io/popmango-paperback-sources/all/">
-    <img src="media/button-add-08.svg" alt="Add PoppingMango 0.8 to Paperback" height="52"/>
+    <img src="media/button-add.svg" alt="Add PoppingMango to Paperback" height="52"/>
   </a>
 </p>
 
 <p align="center">
-  On iPhone or iPad, tap the button that matches your Paperback version.<br/>
-  The <a href="https://poppingmangosources.github.io/popmango-paperback-sources/all/"><b>combined source directory</b></a> lets you browse and search both catalogs together.
+  On iPhone or iPad, tap the button, choose the repository that matches your Paperback version,<br/>
+  and add it from the combined directory. The same page lets you browse and search both catalogs.
 </p>
 
 ---

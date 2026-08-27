@@ -1,10 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300" role="img" aria-label="PoppingMango Sources — Novels, Manga, Manhwa and Manhua for Paperback 0.8 and 0.9">
   <defs>
     <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#ffdcea"/>
-      <stop offset="0.36" stop-color="#ffbbd5"/>
-      <stop offset="0.72" stop-color="#ffcda8"/>
-      <stop offset="1" stop-color="#ffc17e"/>
+      <stop offset="0" stop-color="#f7b0d3"/>
+      <stop offset="0.36" stop-color="#efa6d2"/>
+      <stop offset="0.72" stop-color="#ffcaab"/>
+      <stop offset="1" stop-color="#bde6dc"/>
     </linearGradient>
     <linearGradient id="mango" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#ffc98a"/>
