@@ -98,44 +98,40 @@ function replaceSection(readme, markers, content) {
 function catalog(sources, paperbackVersion) {
     const rows = sources.map((source) => {
         const icon = `${ICON_BASE}/${source.id.toLowerCase()}.png`;
-        const version = source.version ? `<code>${source.version}</code>` : "—";
-        const rating = ratingLabel(source.contentRating);
-        const sourceLink =
-            paperbackVersion === "0.8"
-                ? source.websiteBaseURL
-                : `https://github.com/PoppingMangoSources/general-extensions-mangago/tree/0.9/test/src/${source.id}`;
-        const linkedName =
-            sourceLink === undefined
-                ? `**${source.name}**`
-                : `[**${source.name}**](${sourceLink})`;
-        return `| <img src="${icon}" width="24" align="top"/> ${linkedName} | ${version} | ${rating} |`;
+        const website = sourceWebsite(source, paperbackVersion);
+        return `| <img src="${icon}" width="22" align="top"/> **${source.name}** | [${website.label}](${website.url}) |`;
     });
 
     return [
-        "<details>",
-        `<summary><b>Open the Paperback ${paperbackVersion} catalog · ${sources.length} ${sources.length === 1 ? "source" : "sources"}</b></summary>`,
+        `**${sources.length} ${sources.length === 1 ? "source" : "sources"} available for Paperback ${paperbackVersion}.**`,
         "",
-        "",
-        "| Source | Version | Rating |",
-        "| :----- | :------ | :----- |",
+        "| Source | Site |",
+        "| :----- | :--- |",
         ...rows,
-        "",
-        "</details>",
     ].join("\n");
 }
 
-function ratingLabel(rating) {
-    switch (String(rating ?? "").toUpperCase()) {
-        case "SAFE":
-        case "EVERYONE":
-            return "Safe";
-        case "MATURE":
-            return "Mature";
-        case "ADULT":
-            return "Adult";
-        default:
-            return "—";
+function sourceWebsite(source, paperbackVersion) {
+    if (source.websiteBaseURL !== undefined) {
+        return {
+            label: new URL(source.websiteBaseURL).hostname.replace(/^www\./, ""),
+            url: source.websiteBaseURL,
+        };
     }
+
+    const description = source.description ?? source.desc ?? "";
+    const domain = description.match(/\b(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+\b/i)?.[0];
+    if (domain !== undefined) {
+        return { label: domain.replace(/^www\./, ""), url: `https://${domain}` };
+    }
+
+    return {
+        label: "Source code",
+        url:
+            paperbackVersion === "0.8"
+                ? `https://github.com/PoppingMangoSources/popmango-paperback-sources/tree/main/src/${source.id}`
+                : `https://github.com/PoppingMangoSources/general-extensions-mangago/tree/0.9/test/src/${source.id}`,
+    };
 }
 
 function countBadge(current, next) {
