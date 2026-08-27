@@ -5,8 +5,8 @@
  * Regenerates both source catalogs in README.md.
  *
  * Usage:
- *   node scripts/update-readme.mjs [--folder=0.8]
- *   node scripts/update-readme.mjs [--folder=0.8] [--next-manifest=path/to/versioning.json]
+ *   node scripts/update-readme.mjs [--folder=all]
+ *   node scripts/update-readme.mjs [--folder=all] [--next-manifest=path/to/versioning.json]
  */
 
 import { existsSync } from "node:fs";
@@ -112,11 +112,15 @@ function catalog(sources, paperbackVersion) {
     });
 
     return [
-        `**${sources.length} ${sources.length === 1 ? "source" : "sources"} available for Paperback ${paperbackVersion}.**`,
+        "<details>",
+        `<summary><b>Open the Paperback ${paperbackVersion} catalog · ${sources.length} ${sources.length === 1 ? "source" : "sources"}</b></summary>`,
+        "",
         "",
         "| Source | Version | Rating |",
         "| :----- | :------ | :----- |",
         ...rows,
+        "",
+        "</details>",
     ].join("\n");
 }
 

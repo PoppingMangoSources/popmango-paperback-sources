@@ -84,24 +84,46 @@ const presentationStyles = `
   color: #5d352d;
 }
 
-.source-grid {
+.source-scroll {
+  position: relative;
   max-height: min(36rem, 68vh);
+}
+
+.source-grid {
+  max-height: inherit;
   overflow-y: auto;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
-  scrollbar-gutter: stable;
-  padding-right: .35rem;
+  scrollbar-width: none;
+  padding-right: .65rem;
   touch-action: pan-y;
 }
-.source-grid::-webkit-scrollbar { width: .42rem; }
-.source-grid::-webkit-scrollbar-track { background: transparent; }
-.source-grid::-webkit-scrollbar-thumb {
+.source-grid::-webkit-scrollbar { width: 0; height: 0; }
+
+.source-scroll__rail {
+  position: absolute;
+  top: .45rem;
+  right: .08rem;
+  bottom: .45rem;
+  width: .36rem;
   border-radius: 999px;
-  background: rgba(126, 102, 119, .25);
+  background: #f1e6fb;
+  box-shadow: inset 0 0 0 1px rgba(148, 92, 202, .08);
+  pointer-events: none;
+}
+.source-scroll__rail[hidden] { display: none; }
+.source-scroll__thumb {
+  display: block;
+  width: 100%;
+  min-height: 2.6rem;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #c77bea, #8d62d8);
+  box-shadow: 0 2px 8px rgba(125, 74, 190, .32);
+  will-change: transform;
 }
 
 @media (max-width: 34rem) {
-  .source-grid { max-height: min(32rem, 62vh); }
+  .source-scroll { max-height: min(32rem, 62vh); }
 }
 `;
 

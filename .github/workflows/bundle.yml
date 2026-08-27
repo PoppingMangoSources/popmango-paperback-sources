@@ -29,7 +29,7 @@ jobs:
         run: |
           branch="${GITHUB_REF#refs/heads/}"
           case "$branch" in
-            main) folder="0.8" ;;
+            main) folder="all" ;;
             *) folder="$(printf '%s' "$branch" | tr '/' '-')" ;;
           esac
           echo "name=$folder" >> "$GITHUB_OUTPUT"
@@ -60,11 +60,11 @@ jobs:
       - name: Apply site presentation
         run: node scripts/customize-site.mjs --folder=${{ steps.folder.outputs.name }}
 
-      - name: Mirror the combined catalog to all
+      - name: Preserve the 0.8 compatibility path
         run: |
           if [ "$GITHUB_REF_NAME" = "main" ]; then
-            rm -rf bundles/all
-            cp -R bundles/0.8 bundles/all
+            rm -rf bundles/0.8
+            cp -R bundles/all bundles/0.8
           fi
 
       - name: Publish to GitHub Pages

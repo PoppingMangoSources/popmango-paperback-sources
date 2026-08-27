@@ -10,8 +10,8 @@
  * network request is temporarily unavailable.
  *
  * Usage:
- *   node scripts/build-site.mjs [--folder=0.8]
- *   node scripts/build-site.mjs [--folder=0.8] [--next-manifest=path/to/versioning.json]
+ *   node scripts/build-site.mjs [--folder=all]
+ *   node scripts/build-site.mjs [--folder=all] [--next-manifest=path/to/versioning.json]
  */
 
 import { existsSync } from "node:fs";
@@ -325,9 +325,10 @@ function browserScript() {
     } else if (shown.length === 0) {
       body = '<p class="empty">No sources here match your search.</p>';
     } else {
-      body = '<div class="source-grid">' +
+      body = '<div class="source-scroll"><div class="source-grid">' +
         shown.map(function (source) { return sourceCard(repo, source); }).join("") +
-        '</div>';
+        '</div><span class="source-scroll__rail" aria-hidden="true">' +
+        '<span class="source-scroll__thumb"></span></span></div>';
     }
 
     return '<section class="repository repository--' + (index === 0 ? "mango" : "berry") +
@@ -348,6 +349,35 @@ function browserScript() {
     sections.innerHTML = repos.map(function (repo, index) {
       return repositorySection(repo, index, query);
     }).join("");
+    updateScrollbars();
+  }
+
+  function updateScrollbar(container) {
+    var viewport = container.querySelector(".source-grid");
+    var rail = container.querySelector(".source-scroll__rail");
+    var thumb = container.querySelector(".source-scroll__thumb");
+    var scrollable = viewport.scrollHeight > viewport.clientHeight + 1;
+
+    rail.hidden = !scrollable;
+    if (!scrollable) return;
+
+    var railHeight = rail.clientHeight;
+    var thumbHeight = Math.max(42, railHeight * viewport.clientHeight / viewport.scrollHeight);
+    var available = Math.max(0, railHeight - thumbHeight);
+    var progress = viewport.scrollTop / Math.max(1, viewport.scrollHeight - viewport.clientHeight);
+    thumb.style.height = thumbHeight + "px";
+    thumb.style.transform = "translateY(" + (available * progress) + "px)";
+  }
+
+  function updateScrollbars() {
+    Array.prototype.forEach.call(document.querySelectorAll(".source-scroll"), function (container) {
+      var viewport = container.querySelector(".source-grid");
+      updateScrollbar(container);
+      if (viewport.dataset.scrollbarReady !== "true") {
+        viewport.dataset.scrollbarReady = "true";
+        viewport.addEventListener("scroll", function () { updateScrollbar(container); }, { passive: true });
+      }
+    });
   }
 
   function tickerItem(repo, source) {
@@ -395,6 +425,7 @@ function browserScript() {
   }
 
   filterInput.addEventListener("input", renderSections);
+  window.addEventListener("resize", updateScrollbars);
   renderSections();
   renderTicker();
   repos.forEach(refresh);
