@@ -224,6 +224,22 @@ class ApplicationRuntime {
     }
 
     /**
+     * Asks the app to rebuild the home page.
+     *
+     * 0.8 has no way to invalidate it — the app decides when to rebuild — so
+     * this does nothing. Sources call it after a setting changes, and the new
+     * sections appear the next time the reader opens the page.
+     */
+    invalidateDiscoverSections(): void {
+        // Intentionally empty; see above.
+    }
+
+    /** Waits for a number of seconds. */
+    async sleep(seconds: number): Promise<void> {
+        await new Promise<void>((resolve) => setTimeout(resolve, Math.max(0, seconds) * 1000));
+    }
+
+    /**
      * The user agent the app uses for its own requests.
      *
      * Matching it matters on sites that fingerprint clients, and it is cached
