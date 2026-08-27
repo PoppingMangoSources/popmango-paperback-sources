@@ -111,7 +111,12 @@ export interface SearchResultItem {
 
 /** One entry in a home page section. */
 export interface DiscoverSectionItem {
-    type?: "simpleCarouselItem" | "featuredCarouselItem" | "chapterUpdatesCarouselItem" | "genresCarouselItem";
+    type?:
+        | "simpleCarouselItem"
+        | "prominentCarouselItem"
+        | "featuredCarouselItem"
+        | "chapterUpdatesCarouselItem"
+        | "genresCarouselItem";
     mangaId: string;
     title: string;
     imageUrl: string;
