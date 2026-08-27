@@ -47,11 +47,18 @@ async function main() {
     readme = replaceSection(readme, MARKERS.next, catalog(next, "0.9"));
 
     await writeFile(path.join(ROOT, "README.md"), readme, "utf8");
-    await writeFile(
-        path.join(ROOT, "media", "badge-count.svg"),
-        countBadge(current.length, next.length),
-        "utf8",
-    );
+    await Promise.all([
+        writeFile(
+            path.join(ROOT, "media", "badge-count-08.svg"),
+            countBadge(current.length, "0.8", "mint"),
+            "utf8",
+        ),
+        writeFile(
+            path.join(ROOT, "media", "badge-count-09.svg"),
+            countBadge(next.length, "0.9", "peach"),
+            "utf8",
+        ),
+    ]);
 
     console.log(`README updated with ${current.length} Paperback 0.8 and ${next.length} Paperback 0.9 sources.`);
 }
@@ -134,19 +141,21 @@ function sourceWebsite(source, paperbackVersion) {
     };
 }
 
-function countBadge(current, next) {
-    const total = current + next;
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="245" height="60" viewBox="0 0 245 60" role="img" aria-label="${total} sources">
+function countBadge(count, version, palette) {
+    const colors = palette === "mint"
+        ? { start: "#dff3cb", end: "#b9e6df", bubble: "#ffd0a8" }
+        : { start: "#f6b7d6", end: "#ffd0a8", bubble: "#c9eadf" };
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="270" height="56" viewBox="0 0 270 56" role="img" aria-label="${count} Paperback ${version} sources">
   <defs>
-    <linearGradient id="catalog" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#dff3cb"/>
-      <stop offset="1" stop-color="#b9e6df"/>
+    <linearGradient id="catalog-${version.replace(".", "")}" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="${colors.start}"/>
+      <stop offset="1" stop-color="${colors.end}"/>
     </linearGradient>
   </defs>
-  <rect x="1.5" y="1.5" width="242" height="57" rx="28.5" fill="url(#catalog)" stroke="#9fd4c9" stroke-width="3"/>
-  <text x="92" y="38" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="21" font-weight="800" letter-spacing="2" fill="#33162a">SOURCES</text>
-  <circle cx="199" cy="30" r="21" fill="#f3acd0"/>
-  <text x="199" y="38" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" font-weight="850" fill="#33162a">${total}</text>
+  <rect width="270" height="56" rx="20" fill="url(#catalog-${version.replace(".", "")})"/>
+  <text x="95" y="35" text-anchor="middle" font-family="'Quicksand', 'Nunito', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" font-weight="800" letter-spacing="1.5" fill="#33162a">${version} SOURCES</text>
+  <circle cx="229" cy="28" r="20" fill="${colors.bubble}"/>
+  <text x="229" y="35" text-anchor="middle" font-family="'Quicksand', 'Nunito', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" font-weight="850" fill="#33162a">${count}</text>
 </svg>
 `;
 }

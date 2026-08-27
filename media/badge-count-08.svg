@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="270" height="56" viewBox="0 0 270 56" role="img" aria-label="4 Paperback 0.8 sources">
+  <defs>
+    <linearGradient id="catalog-08" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#dff3cb"/>
+      <stop offset="1" stop-color="#b9e6df"/>
+    </linearGradient>
+  </defs>
+  <rect width="270" height="56" rx="20" fill="url(#catalog-08)"/>
+  <text x="95" y="35" text-anchor="middle" font-family="'Quicksand', 'Nunito', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" font-weight="800" letter-spacing="1.5" fill="#33162a">0.8 SOURCES</text>
+  <circle cx="229" cy="28" r="20" fill="#ffd0a8"/>
+  <text x="229" y="35" text-anchor="middle" font-family="'Quicksand', 'Nunito', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" font-weight="850" fill="#33162a">4</text>
+</svg>

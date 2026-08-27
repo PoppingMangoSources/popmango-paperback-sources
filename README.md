@@ -4,8 +4,12 @@
 
 <p align="center">
   <img src="media/badge-ios.svg" alt="iOS / iPadOS" height="28"/>
-  <img src="media/badge-version.svg" alt="Paperback 0.8 &amp; 0.9" height="28"/>
-  <img src="media/badge-count.svg" alt="32 sources" height="28"/>
+  <img src="media/badge-version-summer.svg" alt="Paperback 0.8 &amp; 0.9" height="28"/>
+</p>
+
+<p align="center">
+  <img src="media/badge-count-09.svg" alt="28 Paperback 0.9 sources" height="28"/>
+  <img src="media/badge-count-08.svg" alt="4 Paperback 0.8 sources" height="28"/>
 </p>
 
 <p align="center">
