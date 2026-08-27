@@ -5,6 +5,8 @@ import type { CheerioAPI } from "cheerio";
 import { decode as decodeEntities } from "html-entities";
 import type { RawData, Request, RequestManager, Response } from "@paperback/types";
 
+import { CloudflareError, isCloudflareChallenge } from "./Cloudflare";
+
 /**
  * How a source describes a request it wants made.
  *
@@ -33,8 +35,17 @@ export interface ResponseBody {
     readonly raw?: RawData;
 }
 
-/** Number of times a failed request is retried before the error is surfaced. */
-const DEFAULT_RETRIES = 2;
+/**
+ * Number of times a failed request is retried before the error is surfaced.
+ *
+ * One. A site that has started refusing requests refuses the retries too, and
+ * each extra attempt is another hit against a rate limit the reader then has
+ * to wait out.
+ */
+const DEFAULT_RETRIES = 1;
+
+/** How long a fetched page is reused before it is asked for again. */
+const RESPONSE_CACHE_MS = 5000;
 
 const BASE64_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
@@ -101,6 +112,18 @@ class ApplicationRuntime {
     private userAgent?: string;
 
     /**
+     * Responses fetched a moment ago, so the same page is not asked for twice.
+     *
+     * 0.8 asks for a series and then for its chapters as two separate calls
+     * that each identify the series by id alone, and on most sites both
+     * answers live on the same page. Without this, opening a series costs two
+     * identical requests. Entries are held only for a few seconds — long
+     * enough to cover one screen opening, short enough that a reader who pulls
+     * to refresh gets a fresh page.
+     */
+    private readonly inFlight = new Map<string, { at: number; response: Promise<[Response, ResponseBody]> }>();
+
+    /**
      * Called once by the source's base class.
      *
      * The app hands each source its own cheerio instance at construction
@@ -126,8 +149,43 @@ class ApplicationRuntime {
      * separate, which is what the parsers expect.
      */
     async scheduleRequest(init: RequestInit, retries = DEFAULT_RETRIES): Promise<[Response, ResponseBody]> {
+        const key = cacheKey(init);
+
+        // Only plain reads are shared. Anything carrying a payload is a
+        // request for the site to do something, and doing it once because it
+        // looked like an earlier one would be wrong.
+        if (key === undefined) {
+            return this.perform(init, retries);
+        }
+
+        const now = Date.now();
+        const cached = this.inFlight.get(key);
+        if (cached !== undefined && now - cached.at < RESPONSE_CACHE_MS) {
+            return cached.response;
+        }
+
+        const response = this.perform(init, retries);
+        this.inFlight.set(key, { at: now, response });
+        // A failure must not be remembered, or one bad moment sticks for the
+        // whole window and a retry cannot get past it.
+        void response.catch(() => this.inFlight.delete(key));
+        this.prune(now);
+
+        return response;
+    }
+
+    private async perform(init: RequestInit, retries: number): Promise<[Response, ResponseBody]> {
         const response = await this.manager().schedule(this.createRequest(init), retries);
         return [response, { text: response.data ?? "", raw: response.rawData }];
+    }
+
+    /** Drops entries that have aged out, so the map cannot grow without bound. */
+    private prune(now: number): void {
+        for (const [key, entry] of this.inFlight) {
+            if (now - entry.at >= RESPONSE_CACHE_MS) {
+                this.inFlight.delete(key);
+            }
+        }
     }
 
     /** Performs a request and returns the body as text, checking the status first. */
@@ -251,14 +309,52 @@ class ApplicationRuntime {
     }
 }
 
-/** Throws a readable error for any non-2xx response. */
+/**
+ * Throws a readable error for any non-2xx response.
+ *
+ * A blocked request is told apart from an ordinary failure, because the two
+ * need different things from the reader: a challenge is cleared by opening the
+ * site once, and saying so is the difference between a source that looks
+ * broken and one that just needs a tap. Sources with an interceptor of their
+ * own will have raised this already; this catches the rest.
+ */
 export function assertOk(response: Response, url: string): void {
     if (response.status === 404) {
         throw new Error(`Not found: ${url}`);
     }
-    if (response.status < 200 || response.status >= 300) {
-        throw new Error(`Request failed with status ${response.status}: ${url}`);
+    if (response.status >= 200 && response.status < 300) {
+        return;
     }
+
+    if (isCloudflareChallenge(response.status, response.headers, response.data ?? "")) {
+        throw new CloudflareError(response.request);
+    }
+
+    throw new Error(`Request failed with status ${response.status}: ${url}`);
+}
+
+/**
+ * The key a response is shared under, or nothing when it must not be shared.
+ *
+ * Only bodyless reads qualify. Cookies are part of the key because a source
+ * that sets one is asking for a different answer than it would get without.
+ */
+function cacheKey(init: RequestInit): string | undefined {
+    if (init.body !== undefined) {
+        return undefined;
+    }
+
+    const method = (init.method ?? "GET").toUpperCase();
+    if (method !== "GET") {
+        return undefined;
+    }
+
+    const cookies = Object.entries(init.cookies ?? {})
+        .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+        .map(([name, value]) => `${name}=${value}`)
+        .join(";");
+
+    return `${init.url} ${init.param ?? ""} ${cookies}`;
 }
 
 /** Form-encodes an object body; strings are sent through untouched. */

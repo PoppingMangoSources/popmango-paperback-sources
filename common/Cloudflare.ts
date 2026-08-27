@@ -3,6 +3,8 @@
 
 import type { Request } from "@paperback/types";
 
+import { hostOf } from "./UrlBuilder";
+
 /**
  * Thrown when a response turns out to be a Cloudflare interstitial rather than
  * the page that was asked for.
@@ -14,7 +16,12 @@ export class CloudflareError extends Error {
     readonly request: Request;
 
     constructor(request: Request) {
-        super(`Cloudflare challenge encountered at ${request.url}`);
+        // The wording matters: this text is what the app puts in front of the
+        // reader, and the cloud icon it names is the only way out of a
+        // challenge, so the message has to say to press it.
+        super(
+            `CLOUDFLARE BYPASS ERROR:\nPlease go to the homepage of <${hostOf(request.url)}> and press the cloud icon.`,
+        );
         this.name = "CloudflareError";
         this.request = request;
     }

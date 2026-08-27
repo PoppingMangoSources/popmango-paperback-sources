@@ -14,7 +14,9 @@ import type {
     PartialSourceManga,
     Request,
     RequestManager,
+    SearchField as RuntimeSearchField,
     SearchRequest as RuntimeSearchRequest,
+    SearchResultsProviding,
     SourceManga as RuntimeSourceManga,
     SourceStateManager,
     TagSection as RuntimeTagSection,
@@ -47,6 +49,7 @@ import type {
     DiscoverSection,
     DiscoverSectionItem,
     PagedResults,
+    SearchField,
     SearchQuery,
     SearchResultItem,
     SourceManga,
@@ -85,7 +88,11 @@ export interface SourceOptions {
  * called out at each method.
  */
 export abstract class PopmangoSource
-    implements ChapterProviding, HomePageSectionsProviding, CloudflareBypassRequestProviding
+    implements
+        ChapterProviding,
+        SearchResultsProviding,
+        HomePageSectionsProviding,
+        CloudflareBypassRequestProviding
 {
     readonly cheerio: CheerioAPI;
     readonly requestManager: RequestManager;
@@ -175,6 +182,18 @@ export abstract class PopmangoSource
      * 0.8 has no separate sort control.
      */
     async getFilterSections(): Promise<TagSection[]> {
+        return [];
+    }
+
+    /**
+     * Free-text boxes offered beside the filters.
+     *
+     * A 0.9 search form could hold anything; 0.8 renders selectable tags and
+     * these boxes, and nothing else. A filter that is not a choice from a list
+     * belongs here — what the reader types comes back in
+     * `SearchQuery.parameters` under the field's id.
+     */
+    async getSearchFieldList(): Promise<SearchField[]> {
         return [];
     }
 
@@ -278,6 +297,13 @@ export abstract class PopmangoSource
         return sections.map(toTagSection);
     }
 
+    async getSearchFields(): Promise<RuntimeSearchField[]> {
+        const fields = await this.guard(() => this.getSearchFieldList());
+        return fields.map((field) =>
+            App.createSearchField({ id: field.id, name: field.name, placeholder: field.placeholder }),
+        );
+    }
+
     /**
      * Builds the home page.
      *
@@ -285,6 +311,11 @@ export abstract class PopmangoSource
      * immediately, then filled in as its request comes back. Sections are
      * fetched together rather than in turn, and one that fails is left empty
      * instead of taking the whole page down with it.
+     *
+     * The app tracks a section by object identity rather than by id, so the
+     * placeholder is kept and its items are set on it — announcing a second,
+     * equal-looking section instead leaves the page with duplicates or with
+     * rows that never fill in.
      */
     async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {
         const sections = (await this.guard(() => this.getDiscoverSections())).filter((section) =>
@@ -292,12 +323,19 @@ export abstract class PopmangoSource
         );
         this.sections = sections;
 
-        for (const section of sections) {
-            sectionCallback(toHomeSection(section, [], true));
+        // Built up front so the layout is settled before any request is made.
+        const placeholders = sections.map((section) => toHomeSection(section, [], false));
+        for (const placeholder of placeholders) {
+            sectionCallback(placeholder);
         }
 
         await Promise.all(
-            sections.map(async (section) => {
+            sections.map(async (section, index) => {
+                const placeholder = placeholders[index];
+                if (placeholder === undefined) {
+                    return;
+                }
+
                 let items: PartialSourceManga[] = [];
                 let hasMore = false;
 
@@ -309,7 +347,9 @@ export abstract class PopmangoSource
                     this.rememberChallenge(error);
                 }
 
-                sectionCallback(toHomeSection(section, items, hasMore));
+                placeholder.items = items;
+                placeholder.containsMoreItems = hasMore;
+                sectionCallback(placeholder);
             }),
         );
     }

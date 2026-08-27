@@ -32,6 +32,7 @@ export {
     type DiscoverSectionItem,
     type MangaInfo,
     type PagedResults,
+    type SearchField,
     type SearchQuery,
     type SearchResultItem,
     type SortingOption,

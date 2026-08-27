@@ -144,3 +144,18 @@ export interface SearchQuery {
     /** Free-form values from the source's own search fields. */
     parameters: Record<string, unknown>;
 }
+
+/**
+ * A free-text box on the search screen, beside the tag filters.
+ *
+ * This is how a filter that is not a choice from a list survives the move to
+ * 0.8 — a minimum chapter count, an author's name. Whatever the reader types
+ * arrives in `SearchQuery.parameters` under the field's id.
+ */
+export interface SearchField {
+    id: string;
+    /** Shown as the field's caption. */
+    name: string;
+    /** Greyed-out example text shown while the box is empty. */
+    placeholder: string;
+}

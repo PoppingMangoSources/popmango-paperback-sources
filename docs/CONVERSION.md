@@ -48,7 +48,8 @@ cheerio.
 | `getMangaDetails(mangaId)` | `getMangaInfo(mangaId)` |
 | `getChapters(sourceManga)` | `getChapterList(sourceManga)` |
 | `getChapterDetails(chapter)` | `getPages(chapter)` |
-| `getAdvancedSearchForm()` / `getSortingOptions()` | `getFilterSections()` |
+| `getAdvancedSearchForm()` / `getSortingOptions()` | `getFilterSections()`, `getSearchFieldList()` |
+| `getSettingsForm()` | `getSettingsSections()` |
 | `cloudflareBypassCompleted()` | handled by `common/` |
 
 The base class implements the 0.8 methods (`getHomePageSections`,
@@ -94,11 +95,15 @@ rendered as titles that do not exist. The genres stay reachable as search
 filters.
 
 **Search forms.** 0.9 builds a real form with text fields, toggles and
-tri-state tags. 0.8 offers one text box plus tags to include or exclude. Each
-filter therefore becomes a tag section, with the tag id prefixed by the section
-it came from so the source can take it apart again. A sort order is a tag
-section too; where a source offers one, choosing more than one leaves the first
-in effect.
+tri-state tags. 0.8 offers tags to include or exclude, plus free-text boxes.
+A filter that is a choice from a list becomes a tag section, with the tag id
+prefixed by the section it came from so the source can take it apart again —
+`getFilterSections()`. A filter that is not a choice from a list (a minimum
+chapter count, an author's name) becomes a text box — `getSearchFieldList()` —
+and what the reader types arrives in `SearchQuery.parameters` under the field's
+id. A sort order is a tag section; where a source offers one, choosing more
+than one leaves the first in effect. What is genuinely lost is the layout: the
+grouping, the toggles and the ordering the 0.9 form controlled.
 
 **Tri-state tags.** 0.9 tags can be neutral, included or excluded. 0.8 has
 include and exclude only, and a source that cannot express exclusion returns
@@ -107,11 +112,23 @@ include and exclude only, and a source that cannot express exclusion returns
 **Chapter and page lookups.** 0.9 hands a source the whole series and the whole
 chapter; 0.8 passes ids. The base class keeps the last series and its chapter
 list so the source still receives complete objects, and refetches when the app
-jumps straight to a chapter after a restart.
+jumps straight to a chapter after a restart. Because the details page and the
+chapter list are usually the same page, a refetch would mean asking for it
+twice; `Application` reuses a response fetched in the last few seconds so it is
+asked for once.
 
-**Settings screens.** 0.9 settings forms have no counterpart in `common/` yet.
-A source needing one implements 0.8's `getSourceMenu()` directly and declares
-`Capability.SETTINGS`.
+**Home page updates.** 0.9 can invalidate the home page after a setting
+changes. 0.8 decides for itself when to rebuild, so
+`Application.invalidateDiscoverSections()` does nothing here and the new
+sections appear the next time the reader opens the page.
+
+**Settings screens.** 0.9 forms become `getSettingsSections()`, built from the
+row helpers in `common/Menu.ts` and declaring `Capability.SETTINGS`. The base
+class wraps them in the single section 0.8's `getSourceMenu()` asks for.
+Because 0.8's state store is asynchronous and a setting may be read from
+somewhere that cannot wait — an interceptor rewriting a header, a URL being
+assembled — every declared key is read into `this.settings` before any source
+method runs, and read back synchronously after that.
 
 ## Checklist
 
