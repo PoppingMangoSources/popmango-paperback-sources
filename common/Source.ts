@@ -214,7 +214,7 @@ export abstract class PopmangoSource
      * `this.settings`. Returning `[]` means the source has no settings, and
      * the app is told as much.
      */
-    getSettingsSections(): MenuSection[] {
+    getSettingsSections(): MenuSection[] | Promise<MenuSection[]> {
         return [];
     }
 

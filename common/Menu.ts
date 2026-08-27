@@ -104,9 +104,14 @@ function toSection(section: MenuSection): DUISection {
  * that it holds a button which opens the real settings form, which is what
  * this produces.
  */
-export function settingsMenu(title: string, sections: () => MenuSection[]): DUISection {
+export function settingsMenu(
+    title: string,
+    sections: () => MenuSection[] | Promise<MenuSection[]>,
+): DUISection {
     const form = App.createDUIForm({
-        sections: async () => sections().map(toSection),
+        // Built when the screen opens rather than up front, so a source whose
+        // settings depend on something fetched can wait for it here.
+        sections: async () => (await sections()).map(toSection),
     });
 
     return App.createDUISection({
