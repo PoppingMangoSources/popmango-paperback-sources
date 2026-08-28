@@ -6,6 +6,7 @@ import { decode as decodeEntities } from "html-entities";
 import type { RawData, Request, RequestManager, Response } from "@paperback/types";
 
 import { CloudflareError, isCloudflareChallenge } from "./Cloudflare";
+import { hostOf } from "./UrlBuilder";
 
 /**
  * How a source describes a request it wants made.
@@ -47,6 +48,9 @@ const DEFAULT_RETRIES = 1;
 /** How long a fetched page is reused before it is asked for again. */
 const RESPONSE_CACHE_MS = 5000;
 
+/** Shown in place of a byte sequence that is not valid UTF-8. */
+const REPLACEMENT = "\uFFFD";
+
 const BASE64_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 /**
@@ -77,18 +81,35 @@ function utf8Decode(bytes: number[]): string {
             codePoint = byte & 0x07;
             length = 4;
         } else {
-            result += "�";
+            result += REPLACEMENT;
             index += 1;
             continue;
         }
 
         if (index + length > bytes.length) {
-            result += "�";
+            result += REPLACEMENT;
             break;
         }
 
+        // Every byte after the lead must be a continuation byte. A sequence
+        // that breaks off early is malformed, and consuming the rest of it
+        // would swallow the character that actually starts there.
+        let malformed = false;
         for (let offset = 1; offset < length; offset += 1) {
-            codePoint = (codePoint << 6) | ((bytes[index + offset] ?? 0) & 0x3f);
+            const continuation = bytes[index + offset] ?? 0;
+            if ((continuation & 0xc0) !== 0x80) {
+                malformed = true;
+                break;
+            }
+            codePoint = (codePoint << 6) | (continuation & 0x3f);
+        }
+
+        // Lead bytes 0xf5 to 0xf7 are legal-looking but describe a code point
+        // past the end of Unicode, which String.fromCodePoint throws on.
+        if (malformed || codePoint > 0x10ffff) {
+            result += REPLACEMENT;
+            index += 1;
+            continue;
         }
 
         result += String.fromCodePoint(codePoint);
@@ -166,9 +187,21 @@ class ApplicationRuntime {
 
         const response = this.perform(init, retries);
         this.inFlight.set(key, { at: now, response });
+
         // A failure must not be remembered, or one bad moment sticks for the
-        // whole window and a retry cannot get past it.
-        void response.catch(() => this.inFlight.delete(key));
+        // whole window and a retry cannot get past it. A refusal counts as a
+        // failure even though the request itself resolved: a reader who hits a
+        // challenge, clears it and comes straight back would otherwise be
+        // handed the stored challenge page and see nothing change.
+        void response.then(
+            ([settled]) => {
+                if (settled.status < 200 || settled.status >= 300) {
+                    this.inFlight.delete(key);
+                }
+            },
+            () => this.inFlight.delete(key),
+        );
+
         this.prune(now);
 
         return response;
@@ -272,7 +305,12 @@ class ApplicationRuntime {
             headers: init.headers ?? {},
             param: init.param,
             data: encodeBody(init.body),
-            cookies: [],
+            // A cookie set on the request itself is how a source asks for the
+            // ungated answer — an age gate, a language, a session. Dropping it
+            // here would send the request bare and quietly return the wrong page.
+            cookies: Object.entries(init.cookies ?? {}).map(([name, value]) =>
+                App.createCookie({ name, value, domain: hostOf(init.url), path: "/" }),
+            ),
         });
     }
 
@@ -336,8 +374,11 @@ export function assertOk(response: Response, url: string): void {
 /**
  * The key a response is shared under, or nothing when it must not be shared.
  *
- * Only bodyless reads qualify. Cookies are part of the key because a source
- * that sets one is asking for a different answer than it would get without.
+ * Only bodyless reads qualify. Everything that can change the answer is part
+ * of the key, headers included: a source often asks one URL for two different
+ * things and tells them apart by header alone. Fetching a page as data and
+ * then as markup is the common case, and keying on the URL only would hand
+ * the second caller the first one's body.
  */
 function cacheKey(init: RequestInit): string | undefined {
     if (init.body !== undefined) {
@@ -349,12 +390,15 @@ function cacheKey(init: RequestInit): string | undefined {
         return undefined;
     }
 
-    const cookies = Object.entries(init.cookies ?? {})
-        .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
-        .map(([name, value]) => `${name}=${value}`)
-        .join(";");
+    return `${init.url} ${init.param ?? ""} ${pairs(init.headers)} ${pairs(init.cookies)}`;
+}
 
-    return `${init.url} ${init.param ?? ""} ${cookies}`;
+/** Renders a record in a stable order, so key equality ignores ordering. */
+function pairs(record: Record<string, string> | undefined): string {
+    return Object.entries(record ?? {})
+        .map(([name, value]) => `${name.toLowerCase()}=${value}`)
+        .sort()
+        .join(";");
 }
 
 /** Form-encodes an object body; strings are sent through untouched. */

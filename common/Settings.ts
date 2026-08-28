@@ -41,7 +41,10 @@ export class SettingsStore {
             this.keys.map(async (key) => {
                 try {
                     const value = await this.stateManager.retrieve(key);
-                    if (value !== null && value !== undefined) {
+                    // A value written this session wins over what was on disk.
+                    // Without this a setting changed while the load was still
+                    // in flight would appear to take and then revert.
+                    if (value !== null && value !== undefined && !this.cache.has(key)) {
                         this.cache.set(key, value);
                     }
                 } catch {

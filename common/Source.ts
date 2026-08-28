@@ -357,8 +357,11 @@ export abstract class PopmangoSource
     async getViewMoreItems(homepageSectionId: string, metadata: unknown): Promise<RuntimePagedResults> {
         return this.guard(async () => {
             // The app can ask for more after a restart, before the home page
-            // has been built in this session.
-            this.sections ??= await this.getDiscoverSections();
+            // has been built in this session. An empty list counts as unbuilt,
+            // since `??=` would keep it and every later lookup would fail.
+            if (this.sections === undefined || this.sections.length === 0) {
+                this.sections = await this.getDiscoverSections();
+            }
 
             const section = this.sections.find((candidate) => candidate.id === homepageSectionId);
             if (section === undefined) {

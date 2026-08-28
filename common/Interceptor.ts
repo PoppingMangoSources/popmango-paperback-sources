@@ -115,7 +115,7 @@ export class CookieStorageInterceptor {
     private readonly stateManager: SourceStateManager;
     private readonly key: string;
     private cookies: Record<string, string> = {};
-    private loaded = false;
+    private hydration?: Promise<void>;
 
     constructor(stateManager: SourceStateManager, key = "stored_cookies") {
         this.stateManager = stateManager;
@@ -138,15 +138,28 @@ export class CookieStorageInterceptor {
         void this.persist();
     }
 
-    /** Returns the stored cookies, loading them from state on first use. */
+    /**
+     * Returns the stored cookies, loading them from state on first use.
+     *
+     * The load is shared rather than merely flagged. The home page fires every
+     * section at once on a cold start, so without this each of them would race
+     * past a half-set flag and go out with no cookies — one request would
+     * carry the saved clearance and the rest would come back challenged.
+     */
     async all(): Promise<Record<string, string>> {
-        if (!this.loaded) {
-            this.loaded = true;
+        this.hydration ??= this.hydrate();
+        await this.hydration;
+        return this.cookies;
+    }
+
+    private async hydrate(): Promise<void> {
+        try {
             const stored = (await this.stateManager.retrieve(this.key)) as Record<string, string> | undefined;
             // Anything already set this session wins over what was on disk.
             this.cookies = { ...(stored ?? {}), ...this.cookies };
+        } catch {
+            // Unreadable state just means starting from an empty jar.
         }
-        return this.cookies;
     }
 
     private async persist(): Promise<void> {
@@ -229,10 +242,21 @@ export class InterceptorChain implements SourceInterceptor {
         });
 
         // Only rebuild the response when the source actually changed the body.
-        if (body.text === (response.data ?? "")) {
+        // A rewritten `raw` counts: an interceptor that unpacks a compressed
+        // or obfuscated payload leaves the text alone and hands back bytes.
+        if (body.text === (response.data ?? "") && body.raw === response.rawData) {
             return response;
         }
-        return { ...response, data: body.text };
+
+        // Rebuilt field by field rather than spread, so nothing is lost if the
+        // host hands these back on a prototype instead of as own properties.
+        return {
+            data: body.text,
+            rawData: body.raw,
+            status: response.status,
+            headers: response.headers,
+            request: response.request,
+        };
     }
 }
 
