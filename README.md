@@ -76,14 +76,31 @@ These sources have been converted and checked against Paperback 0.8’s availabl
 
 <!-- sources-08:start -->
 
-**4 sources available for Paperback 0.8.**
+**21 sources available for Paperback 0.8.**
 
 | Source | Site |
 | :----- | :--- |
 | <img src="media/sources/bunmanga.png" width="22" align="top"/> **BunManga** | [bunmanga.com](https://bunmanga.com) |
+| <img src="media/sources/chikari.png" width="22" align="top"/> **Chikari** | [chikari.moe](https://chikari.moe) |
 | <img src="media/sources/cocomic.png" width="22" align="top"/> **Cocomic** | [cocomic.co](https://cocomic.co) |
+| <img src="media/sources/galaxymanga.png" width="22" align="top"/> **Galaxy Manga** | [galaxymanga.io](https://galaxymanga.io) |
+| <img src="media/sources/kaliscan.png" width="22" align="top"/> **KaliScan** | [kaliscan.com](https://kaliscan.com) |
+| <img src="media/sources/kingofshojo.png" width="22" align="top"/> **King of Shojo** | [kingofshojo.com](https://kingofshojo.com) |
 | <img src="media/sources/likemanga.png" width="22" align="top"/> **LikeManga** | [likemanga.ink](https://likemanga.ink) |
+| <img src="media/sources/luacomic.png" width="22" align="top"/> **Lua Comic** | [luacomic.org](https://luacomic.org) |
+| <img src="media/sources/mangaberri.png" width="22" align="top"/> **MangaBerri** | [mangaberri.com](https://mangaberri.com) |
+| <img src="media/sources/mangacherri.png" width="22" align="top"/> **MangaCherri** | [mangacherri.com](https://mangacherri.com) |
+| <img src="media/sources/mangatown.png" width="22" align="top"/> **MangaTown** | [mangatown.com](https://www.mangatown.com) |
+| <img src="media/sources/myreadingmanga.png" width="22" align="top"/> **MyReadingManga** | [myreadingmanga.info](https://myreadingmanga.info) |
+| <img src="media/sources/omanga.png" width="22" align="top"/> **OManga** | [omanga.to](https://omanga.to) |
+| <img src="media/sources/reimanga.png" width="22" align="top"/> **ReiManga** | [reimanga.net](https://reimanga.net) |
+| <img src="media/sources/rinkocomics.png" width="22" align="top"/> **RinkoComics** | [rinkocomics.com](https://rinkocomics.com) |
+| <img src="media/sources/rokaricomics.png" width="22" align="top"/> **Rokari Comics** | [rokaricomics.com](https://rokaricomics.com) |
+| <img src="media/sources/stonescape.png" width="22" align="top"/> **StoneScape** | [stonescape.xyz](https://stonescape.xyz) |
+| <img src="media/sources/templescan.png" width="22" align="top"/> **Temple Scan** | [templetoons.com](https://templetoons.com) |
+| <img src="media/sources/valirscans.png" width="22" align="top"/> **Valir Scans** | [valirscans.org](https://valirscans.org) |
 | <img src="media/sources/vymanga.png" width="22" align="top"/> **VyManga** | [mangavyvy.net](https://mangavyvy.net) |
+| <img src="media/sources/xcomic.png" width="22" align="top"/> **XCOMIC** | [xcomic.me](https://xcomic.me) |
 
 <!-- sources-08:end -->
 
