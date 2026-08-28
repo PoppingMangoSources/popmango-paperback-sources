@@ -40,6 +40,7 @@ import {
     GENRE_OPTIONS,
     HOME_HEADINGS,
     MIN_RATING_OPTIONS,
+    NOVEL_TYPE,
     SECTIONS,
     SETTINGS_KEYS,
     SORT_OPTIONS,
@@ -326,7 +327,12 @@ export class OManga extends PopmangoSource {
                 excludeGenre: resolveOptionValues(GENRE_OPTIONS, excluded.get(FILTERS.GENRE)),
                 genreStrict: included.get(FILTERS.GENRE_MODE)?.[0] === "and" ? "true" : undefined,
                 type: resolveOptionValues(TYPE_OPTIONS, included.get(FILTERS.TYPE)),
-                excludeType: resolveOptionValues(TYPE_OPTIONS, excluded.get(FILTERS.TYPE)),
+                // Novels are not carried here, so they are excluded on every
+                // query rather than only when the reader asks.
+                excludeType: [
+                    NOVEL_TYPE,
+                    ...(resolveOptionValues(TYPE_OPTIONS, excluded.get(FILTERS.TYPE)) ?? []),
+                ],
                 status: included.get(FILTERS.STATUS),
                 ageRating: resolveOptionValues(AGE_RATING_OPTIONS, included.get(FILTERS.AGE)),
                 minRating: included.get(FILTERS.RATING)?.[0],

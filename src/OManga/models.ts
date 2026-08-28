@@ -212,13 +212,20 @@ export const GENRE_MATCH_OPTIONS: Array<{ id: string; title: string }> = [
     { id: "or", title: "Match any genre" },
 ];
 
+/**
+ * The site also carries novels, which this extension does not.
+ *
+ * A 0.8 chapter is a list of page images, so prose has nowhere to go. "Novel"
+ * is not offered as a type and every listing asks the site to leave it out.
+ */
+export const NOVEL_TYPE = "Novel";
+
 export const TYPE_OPTIONS: OptionItem[] = toOptions([
     "Manga",
     "Manhwa",
     "Manhua",
     "One-shot",
     "Doujinshi",
-    "Novel",
     "Comics",
     "Other",
 ]);
