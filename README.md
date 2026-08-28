@@ -138,7 +138,7 @@ npm test
 
 Pushing <code>main</code> publishes the combined directory at <code>/all</code>. The previous <code>/0.8</code> path remains available so existing Paperback 0.8 installs keep receiving updates.
 
-The [conversion guide](docs/CONVERSION.md) documents the 0.9-to-0.8 capability map. The shared runtime in <code>common/</code> implements the Paperback 0.8 interfaces used by the converted sources.
+The shared runtime in <code>common/</code> implements the Paperback 0.8 interfaces used by the converted sources.
 
 </details>
 
