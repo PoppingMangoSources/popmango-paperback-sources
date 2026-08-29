@@ -257,7 +257,7 @@ export class InterceptorChain implements SourceInterceptor {
 
         // Rebuilt field by field rather than spread, so nothing is lost if the
         // host hands these back on a prototype instead of as own properties.
-        return {
+        const rebuilt: Response = {
             data: body.text,
             rawData: body.raw,
             status: response.status,
@@ -266,14 +266,25 @@ export class InterceptorChain implements SourceInterceptor {
                 : response.headers,
             request: response.request,
         };
+
+        // The app decides how to read a body by its type as well as by its
+        // bytes, and it looks for that type in a field the 0.8 declarations do
+        // not mention. Sources that rebuild an image set it anyway, and an
+        // image handed back without it is read as whatever it used to be.
+        if (contentTypeChanged) {
+            (rebuilt as { mimeType?: string }).mimeType = body.contentType;
+        }
+
+        return rebuilt;
     }
 }
 
 /**
  * Replaces the content type, leaving the other headers as they were.
  *
- * The existing header is found case-insensitively and removed, since a header
- * set twice under different casing is read inconsistently.
+ * Every existing spelling is removed first, then the type is set under both
+ * the lower-cased and the capitalised name — which is what the app has been
+ * seen to look for, and it does not agree with itself about which.
  */
 function withContentType(headers: Record<string, unknown>, contentType: string): Record<string, unknown> {
     const next: Record<string, unknown> = {};
@@ -285,6 +296,7 @@ function withContentType(headers: Record<string, unknown>, contentType: string):
     }
 
     next["content-type"] = contentType;
+    next["Content-Type"] = contentType;
     return next;
 }
 

@@ -117,6 +117,18 @@ chapter list are usually the same page, a refetch would mean asking for it
 twice; `Application` reuses a response fetched in the last few seconds so it is
 asked for once.
 
+**Redirects.** 0.9 reports the URL a request finally landed on and lets a
+source re-apply its headers to a redirect target. 0.8 reports neither, so a
+source that needs to know where it ended up asks for the canonical address in
+the first place, and one that needs particular headers on the second hop tries
+each candidate host itself rather than following a redirect blindly.
+
+**Rebuilt images.** A source that unscrambles or decrypts a page image hands
+back bytes in a different format from the ones that arrived, and the app goes
+by the declared type rather than by the bytes. An interceptor returns the new
+type alongside the new bytes and the chain sets it on the response; without
+that the reader tries to read a rebuilt image as whatever it used to be.
+
 **Home page updates.** 0.9 can invalidate the home page after a setting
 changes. 0.8 decides for itself when to rebuild, so
 `Application.invalidateDiscoverSections()` does nothing here and the new

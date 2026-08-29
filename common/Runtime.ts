@@ -268,6 +268,31 @@ class ApplicationRuntime {
      * arrive.
      */
     base64Decode(value: string): string {
+        return utf8Decode(this.base64Bytes(value));
+    }
+
+    /**
+     * Decodes base64 into the bytes themselves.
+     *
+     * A payload that is not text — a ciphertext, an image — has to survive as
+     * bytes, and reading it as a string would replace everything that is not
+     * valid UTF-8 before the source ever saw it.
+     */
+    base64DecodeBytes(value: string): Uint8Array {
+        return Uint8Array.from(this.base64Bytes(value));
+    }
+
+    /**
+     * Turns UTF-8 bytes into a string.
+     *
+     * The runtime has no `TextDecoder`, and a source that has just decrypted
+     * something holds bytes rather than text.
+     */
+    utf8Decode(bytes: Uint8Array | readonly number[]): string {
+        return utf8Decode(Array.from(bytes));
+    }
+
+    private base64Bytes(value: string): number[] {
         const clean = value.replace(/[\r\n\s]/g, "").replace(/-/g, "+").replace(/_/g, "/");
         let bits = 0;
         let accumulator = 0;
@@ -292,7 +317,7 @@ class ApplicationRuntime {
             }
         }
 
-        return utf8Decode(bytes);
+        return bytes;
     }
 
     /** Performs a request and parses the body as JSON. */

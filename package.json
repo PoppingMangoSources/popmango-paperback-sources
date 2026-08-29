@@ -16,7 +16,7 @@
     "test": "paperback test",
     "typecheck": "tsc --noEmit",
     "site": "node scripts/build-site.mjs",
-    "check": "node scripts/check-runtime.mjs && node scripts/check-aes.mjs"
+    "check": "node scripts/check-runtime.mjs && node scripts/check-aes.mjs && node scripts/check-mangago.mjs"
   },
   "dependencies": {
     "@paperback/toolchain": "0.8.7",
