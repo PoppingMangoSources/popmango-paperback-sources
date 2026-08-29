@@ -3,6 +3,7 @@
 
 import type { Cookie, Request, Response, SourceInterceptor, SourceStateManager } from "@paperback/types";
 
+import { headerValue } from "./Cloudflare";
 import { hostOf } from "./UrlBuilder";
 import type { ResponseBody } from "./Runtime";
 
@@ -239,12 +240,18 @@ export class InterceptorChain implements SourceInterceptor {
         const body = await this.interceptor.interceptResponse(request, response, {
             text: response.data ?? "",
             raw: response.rawData,
+            contentType: headerValue(response.headers, "content-type"),
         });
 
         // Only rebuild the response when the source actually changed the body.
-        // A rewritten `raw` counts: an interceptor that unpacks a compressed
-        // or obfuscated payload leaves the text alone and hands back bytes.
-        if (body.text === (response.data ?? "") && body.raw === response.rawData) {
+        // A rewritten `raw` counts: an interceptor that rebuilds an image or
+        // unpacks an obfuscated payload leaves the text alone and hands back
+        // bytes, and may hand back a different format with them.
+        const contentTypeChanged =
+            body.contentType !== undefined &&
+            body.contentType !== headerValue(response.headers, "content-type");
+
+        if (body.text === (response.data ?? "") && body.raw === response.rawData && !contentTypeChanged) {
             return response;
         }
 
@@ -254,10 +261,31 @@ export class InterceptorChain implements SourceInterceptor {
             data: body.text,
             rawData: body.raw,
             status: response.status,
-            headers: response.headers,
+            headers: contentTypeChanged
+                ? withContentType(response.headers, body.contentType ?? "")
+                : response.headers,
             request: response.request,
         };
     }
+}
+
+/**
+ * Replaces the content type, leaving the other headers as they were.
+ *
+ * The existing header is found case-insensitively and removed, since a header
+ * set twice under different casing is read inconsistently.
+ */
+function withContentType(headers: Record<string, unknown>, contentType: string): Record<string, unknown> {
+    const next: Record<string, unknown> = {};
+
+    for (const [key, value] of Object.entries(headers ?? {})) {
+        if (key.toLowerCase() !== "content-type") {
+            next[key] = value;
+        }
+    }
+
+    next["content-type"] = contentType;
+    return next;
 }
 
 function cookiesToRecord(cookies: Cookie[] | undefined): Record<string, string> {

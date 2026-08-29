@@ -34,6 +34,14 @@ export interface RequestInit {
 export interface ResponseBody {
     readonly text: string;
     readonly raw?: RawData;
+    /**
+     * What the body now is, when an interceptor has changed it.
+     *
+     * A source that rebuilds an image hands back a different format from the
+     * one that arrived, and the reader goes by the content type rather than
+     * the bytes, so it has to be told.
+     */
+    readonly contentType?: string;
 }
 
 /**

@@ -3,7 +3,7 @@
   "version": "0.8.0",
   "private": true,
   "repositoryName": "PoppingMango Sources",
-  "description": "Novels, manga, manhwa & manhua for Paperback 0.8 — maintained by Popmango.",
+  "description": "Novels, manga, manhwa & manhua for Paperback 0.8 \u2014 maintained by Popmango.",
   "author": "Popmango",
   "license": "GPL-3.0-or-later",
   "homepage": "https://poppingmangosources.github.io/popmango-paperback-sources/all",
@@ -16,7 +16,7 @@
     "test": "paperback test",
     "typecheck": "tsc --noEmit",
     "site": "node scripts/build-site.mjs",
-    "check": "node scripts/check-runtime.mjs"
+    "check": "node scripts/check-runtime.mjs && node scripts/check-aes.mjs"
   },
   "dependencies": {
     "@paperback/toolchain": "0.8.7",
