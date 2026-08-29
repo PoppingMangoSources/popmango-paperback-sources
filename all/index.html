@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="PoppingMango manga, manhwa, manhua and novel sources for Paperback 0.8 and 0.9.">
+<meta name="theme-color" content="#ffca8f">
+<meta name="color-scheme" content="light">
+<title>PoppingMango Sources</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2048%2048%22%20width%3D%2232%22%20height%3D%2232%22%20role%3D%22img%22%20aria-label%3D%22PoppingMango%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22mango-gradient%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23ffd087%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23ff9a61%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Ccircle%20cx%3D%2224%22%20cy%3D%2224%22%20r%3D%2223%22%20fill%3D%22%23fff7dc%22%2F%3E%3Cellipse%20cx%3D%2223%22%20cy%3D%2227%22%20rx%3D%2213%22%20ry%3D%2215%22%20fill%3D%22url(%23mango-gradient)%22%2F%3E%3Cellipse%20cx%3D%2218%22%20cy%3D%2220%22%20rx%3D%223.5%22%20ry%3D%226%22%20fill%3D%22%23fff%22%20opacity%3D%22.42%22%2F%3E%3Cellipse%20cx%3D%2231%22%20cy%3D%2210%22%20rx%3D%227%22%20ry%3D%223.4%22%20fill%3D%22%238fce8b%22%20transform%3D%22rotate(24%2031%2010)%22%2F%3E%3Ccircle%20cx%3D%2234%22%20cy%3D%2217%22%20r%3D%222.4%22%20fill%3D%22%23fff%22%20opacity%3D%22.9%22%2F%3E%3C%2Fsvg%3E">
+<style>
+
+:root {
+  color-scheme: light;
+  --cream: #fffaf0;
+  --paper: #fffefa;
+  --sun: #ffd78a;
+  --mango: #ffae69;
+  --mango-deep: #ef7e55;
+  --pink: #ffabc7;
+  --berry: #c99be8;
+  --sky: #cceef0;
+  --sea: #91d8d1;
+  --leaf: #8fcf8c;
+  --mint: #e5f5d8;
+  --ink: #493042;
+  --ink-soft: #7e6677;
+  --line: #f0ddd9;
+  --shadow: 0 12px 35px rgba(124, 75, 91, .12);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; background: var(--cream); }
+body {
+  margin: 0;
+  min-width: 300px;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 12% 26%, rgba(255, 171, 199, .24), transparent 22rem),
+    linear-gradient(180deg, #effcfa 0, var(--cream) 35rem);
+  color: var(--ink);
+  font-family: ui-rounded, "SF Pro Rounded", "Avenir Next", "Quicksand", system-ui, sans-serif;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; }
+
+.summer-sky { position: absolute; inset: 0 0 auto; height: 33rem; overflow: hidden; pointer-events: none; }
+.sun {
+  position: absolute;
+  top: 5rem;
+  right: max(3vw, calc(50% - 36rem));
+  width: 11rem;
+  height: 11rem;
+  border-radius: 50%;
+  background: rgba(255, 215, 138, .72);
+  box-shadow: 0 0 0 2.5rem rgba(255, 215, 138, .13), 0 0 0 5rem rgba(255, 215, 138, .08);
+}
+.cloud {
+  position: absolute;
+  width: 12rem;
+  height: 3rem;
+  border-radius: 999px;
+  background: rgba(255,255,255,.7);
+  filter: blur(.2px);
+}
+.cloud::before, .cloud::after { content: ""; position: absolute; border-radius: 50%; background: inherit; }
+.cloud::before { width: 5rem; height: 5rem; left: 2rem; bottom: 0; }
+.cloud::after { width: 6.5rem; height: 6.5rem; right: 1rem; bottom: 0; }
+.cloud--one { top: 7rem; left: -4rem; transform: scale(.62); }
+.cloud--two { top: 20rem; right: -4rem; transform: scale(.48); }
+
+.hero, main, .footer { position: relative; z-index: 1; width: min(70rem, calc(100% - 2rem)); margin-inline: auto; }
+.hero { min-height: 31rem; padding: 1.5rem 0 4rem; display: grid; grid-template-columns: 1.45fr .75fr; gap: 3rem; align-items: center; }
+.topbar { grid-column: 1 / -1; align-self: start; display: flex; align-items: center; justify-content: space-between; }
+.brand { display: inline-flex; align-items: center; gap: .65rem; text-decoration: none; }
+.brand__mark { display: flex; filter: drop-shadow(0 5px 9px rgba(239,126,85,.2)); }
+.brand span:last-child { display: flex; flex-direction: column; line-height: 1.18; }
+.brand b { font-size: 1.02rem; }
+.brand small { color: var(--ink-soft); font-size: .74rem; }
+.topbar__links { display: flex; gap: .3rem; }
+.topbar__links a { padding: .45rem .8rem; border-radius: 999px; text-decoration: none; font-size: .86rem; font-weight: 750; color: var(--ink-soft); }
+.topbar__links a:hover, .topbar__links a:focus-visible { background: rgba(255,255,255,.72); color: var(--ink); }
+
+.eyebrow { margin: 0 0 .4rem; color: var(--mango-deep); font-size: .76rem; font-weight: 850; letter-spacing: .13em; text-transform: uppercase; }
+.hero h1 { margin: 0; font-size: clamp(3.15rem, 8vw, 5.8rem); line-height: .91; letter-spacing: -.07em; }
+.hero h1 span { color: var(--mango-deep); }
+.hero__lede { max-width: 38rem; margin: 1.35rem 0 1.5rem; color: var(--ink-soft); font-size: 1.08rem; }
+.hero__actions, .repository__actions { display: flex; flex-wrap: wrap; gap: .65rem; }
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: .65rem 1.1rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: .9rem;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 0 7px 18px rgba(113,69,83,.09);
+  transition: transform .16s ease, box-shadow .16s ease;
+}
+.button:hover, .button:focus-visible { transform: translateY(-2px); box-shadow: 0 11px 24px rgba(113,69,83,.14); }
+.button--mango { background: linear-gradient(120deg, var(--sun), var(--mango)); color: #5d352d; }
+.button--berry { background: linear-gradient(120deg, var(--pink), var(--berry)); color: #52334f; }
+.button--paper { border-color: var(--line); background: var(--paper); color: var(--ink-soft); }
+
+.hero__card {
+  justify-self: end;
+  position: relative;
+  width: min(18rem, 100%);
+  aspect-ratio: .82;
+  padding: 2rem;
+  border: 2px solid rgba(255,255,255,.78);
+  border-radius: 44% 44% 35% 35% / 34% 34% 27% 27%;
+  background: linear-gradient(160deg, rgba(255,255,255,.87), rgba(255,239,213,.72));
+  box-shadow: var(--shadow);
+  transform: rotate(2deg);
+}
+.hero__mango { display: grid; place-items: center; height: 72%; filter: drop-shadow(0 15px 14px rgba(239,126,85,.18)); }
+.hero__caption { display: block; text-align: center; color: var(--ink-soft); font-size: .82rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.hero__sparkle { position: absolute; top: 1.3rem; right: 1.7rem; color: var(--pink); font-size: 1.8rem; animation: twinkle 2.6s ease-in-out infinite; }
+@keyframes twinkle { 50% { transform: rotate(18deg) scale(1.18); opacity: .6; } }
+
+.ticker { position: relative; z-index: 2; width: 100%; overflow: hidden; padding: .8rem 0 1.2rem; }
+.ticker__track { display: flex; width: max-content; animation: drift 72s linear infinite; }
+.ticker:hover .ticker__track, .ticker:focus-within .ticker__track { animation-play-state: paused; }
+.ticker__set { display: flex; gap: .75rem; padding-right: .75rem; }
+.ticker__item {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  width: 13.5rem;
+  padding: .55rem .72rem;
+  border: 1px solid rgba(240,221,217,.9);
+  border-radius: 1rem;
+  background: rgba(255,254,250,.82);
+  box-shadow: 0 5px 18px rgba(124,75,91,.07);
+  text-decoration: none;
+}
+.ticker__item img { width: 38px; height: 38px; border-radius: 10px; object-fit: cover; background: #fff4e5; }
+.ticker__item span { min-width: 0; display: flex; flex-direction: column; }
+.ticker__item b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .83rem; }
+.ticker__item small { color: var(--ink-soft); font-size: .67rem; }
+.ticker__fade { position: absolute; z-index: 2; inset-block: 0; width: 5rem; pointer-events: none; }
+.ticker__fade--left { left: 0; background: linear-gradient(90deg, var(--cream), transparent); }
+.ticker__fade--right { right: 0; background: linear-gradient(-90deg, var(--cream), transparent); }
+@keyframes drift { to { transform: translateX(calc(-50% - .375rem)); } }
+
+main { padding: 2rem 0 1rem; }
+.compat {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.2rem;
+  border: 1px solid #f2d9b1;
+  border-radius: 1.25rem;
+  background: linear-gradient(105deg, #fff8e5, #fff1f6);
+  box-shadow: 0 8px 25px rgba(124,75,91,.07);
+}
+.compat p { margin: 0; }
+.compat__flower { flex: 0 0 auto; display: grid; place-items: center; width: 2.8rem; height: 2.8rem; border-radius: 50%; background: var(--pink); color: #fff; font-size: 1.35rem; }
+
+.catalog-tools { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin: 3.5rem 0 1.3rem; }
+.catalog-tools h2 { margin: 0; font-size: clamp(2rem, 5vw, 3rem); letter-spacing: -.04em; }
+.search {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  width: min(22rem, 100%);
+  padding: 0 .95rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  box-shadow: 0 7px 20px rgba(124,75,91,.08);
+}
+.search span { color: var(--ink-soft); font-size: 1.1rem; }
+.search input { width: 100%; padding: .75rem 0; border: 0; outline: 0; background: transparent; color: var(--ink); font: inherit; }
+.search input::placeholder { color: #a992a2; }
+
+.repository {
+  scroll-margin-top: 1rem;
+  margin-bottom: 2rem;
+  padding: clamp(1.1rem, 3vw, 1.7rem);
+  border: 1px solid var(--line);
+  border-radius: 2rem;
+  background: rgba(255,254,250,.88);
+  box-shadow: var(--shadow);
+}
+.repository--mango { border-top: 5px solid var(--mango); }
+.repository--berry { border-top: 5px solid var(--berry); }
+.repository__head { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; margin-bottom: 1.25rem; }
+.repository__head h3 { margin: 0; font-size: clamp(1.55rem, 4vw, 2.15rem); letter-spacing: -.04em; }
+.repository__head h3 span { display: inline-block; margin-left: .35rem; padding: .2rem .55rem; border-radius: 999px; background: #fff2dc; color: var(--mango-deep); font-size: .7rem; letter-spacing: 0; vertical-align: middle; }
+.repository--berry .repository__head h3 span { background: #f7eafb; color: #9567b6; }
+.repository__head p:not(.repository__kicker) { margin: .25rem 0 0; color: var(--ink-soft); }
+.repository__kicker { margin: 0 0 .12rem; color: var(--mango-deep); font-size: .73rem; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
+.repository--berry .repository__kicker { color: #9567b6; }
+
+.source-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15.2rem, 1fr)); gap: .65rem; }
+.source-card {
+  display: flex;
+  align-items: center;
+  gap: .72rem;
+  min-width: 0;
+  padding: .72rem;
+  border: 1px solid #f2e6df;
+  border-radius: 1rem;
+  background: #fff;
+  text-decoration: none;
+  transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+.source-card:hover, .source-card:focus-visible { transform: translateY(-2px); border-color: var(--pink); box-shadow: 0 9px 20px rgba(124,75,91,.11); }
+.source-card img { flex: 0 0 auto; width: 54px; height: 54px; border-radius: 13px; object-fit: cover; background: #fff5e7; }
+.source-card__copy { display: flex; flex: 1 1 auto; min-width: 0; flex-direction: column; }
+.source-card__copy b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.source-card__copy > span { display: flex; align-items: center; gap: .4rem; margin-top: .16rem; color: var(--ink-soft); font-size: .72rem; }
+.source-card__add { flex: 0 0 auto; display: grid; place-items: center; width: 1.8rem; height: 1.8rem; border-radius: 50%; background: #fff3dd; color: var(--mango-deep); font-weight: 900; }
+.rating { padding: .05rem .42rem; border-radius: 999px; font-style: normal; font-size: .64rem; font-weight: 850; }
+.rating--safe { background: var(--mint); color: #4c733c; }
+.rating--mature { background: #fff0c9; color: #91611d; }
+.rating--adult { background: #ffe0eb; color: #a4486d; }
+.empty { margin: 0; padding: 2.5rem 1rem; border: 1px dashed var(--line); border-radius: 1rem; color: var(--ink-soft); text-align: center; }
+
+.footer { display: flex; flex-direction: column; align-items: center; padding: 3rem 0 4rem; text-align: center; color: var(--ink-soft); }
+.footer p { margin: .35rem 0 0; }
+.footer__links a { color: var(--mango-deep); font-weight: 800; }
+.footer__built { font-size: .75rem; opacity: .72; }
+
+@media (max-width: 48rem) {
+  .hero { min-height: auto; grid-template-columns: 1fr; padding-bottom: 2.5rem; }
+  .hero__card { display: none; }
+  .hero__copy { padding: 2.6rem 0 1rem; }
+  .catalog-tools, .repository__head { align-items: stretch; flex-direction: column; }
+  .search { width: 100%; }
+  .repository__actions .button { flex: 1 1 auto; }
+}
+
+@media (max-width: 34rem) {
+  .hero, main, .footer { width: min(100% - 1.25rem, 70rem); }
+  .topbar__links a { padding: .4rem .52rem; }
+  .topbar__links a:nth-child(3) { display: none; }
+  .hero h1 { font-size: clamp(3rem, 17vw, 4.4rem); }
+  .hero__actions .button { flex: 1 1 100%; }
+  .ticker__fade { width: 2rem; }
+  .compat { align-items: flex-start; }
+  .source-grid { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .ticker__track, .hero__sparkle { animation: none; }
+  .button, .source-card { transition: none; }
+}
+
+
+/* Version presentation and contained catalog scrolling. */
+.button--berry {
+  background: linear-gradient(120deg, #b8f0dc, #9edfe9);
+  color: #315a59;
+}
+
+.repository--mango { border-top-color: var(--sea); }
+.repository--mango .repository__kicker { color: #4eaaa4; }
+.repository--mango .repository__head h3 span {
+  background: #e7f9f3;
+  color: #3e8f8a;
+}
+.repository--mango .source-card__add {
+  background: #e7f9f3;
+  color: #3e8f8a;
+}
+.repository--mango .button--mango {
+  background: linear-gradient(120deg, #b8f0dc, #9edfe9);
+  color: #315a59;
+}
+
+.repository--berry { border-top-color: var(--mango); }
+.repository--berry .repository__kicker { color: var(--mango-deep); }
+.repository--berry .repository__head h3 span {
+  background: #fff2dc;
+  color: var(--mango-deep);
+}
+.repository--berry .source-card__add {
+  background: #fff3dd;
+  color: var(--mango-deep);
+}
+.repository--berry .button--berry {
+  background: linear-gradient(120deg, var(--sun), var(--mango));
+  color: #5d352d;
+}
+
+.source-scroll {
+  position: relative;
+  max-height: min(36rem, 68vh);
+}
+
+.source-grid {
+  max-height: inherit;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-right: .65rem;
+  touch-action: pan-y;
+}
+.source-grid::-webkit-scrollbar { width: 0; height: 0; }
+
+.source-scroll__rail {
+  position: absolute;
+  top: .45rem;
+  right: .08rem;
+  bottom: .45rem;
+  width: .28rem;
+  border-radius: 999px;
+  background: #fff;
+  pointer-events: none;
+}
+.source-scroll__rail[hidden] { display: none; }
+.source-scroll__thumb {
+  display: block;
+  width: 100%;
+  min-height: 2.6rem;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(247, 137, 193, .72), rgba(225, 105, 171, .56));
+  box-shadow: 0 1px 5px rgba(210, 88, 155, .14);
+  will-change: transform;
+}
+
+@media (max-width: 34rem) {
+  .source-scroll { max-height: min(32rem, 62vh); }
+}
+
+</style>
+</head>
+<body>
+<div class="summer-sky" aria-hidden="true">
+  <span class="sun"></span>
+  <span class="cloud cloud--one"></span>
+  <span class="cloud cloud--two"></span>
+</div>
+
+<header class="hero" id="top">
+  <nav class="topbar" aria-label="Site links">
+    <a class="brand" href="#top">
+      <span class="brand__mark" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="46" height="46" role="img" aria-label="PoppingMango"><defs><linearGradient id="mango-gradient" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd087"/><stop offset="1" stop-color="#ff9a61"/></linearGradient></defs><circle cx="24" cy="24" r="23" fill="#fff7dc"/><ellipse cx="23" cy="27" rx="13" ry="15" fill="url(#mango-gradient)"/><ellipse cx="18" cy="20" rx="3.5" ry="6" fill="#fff" opacity=".42"/><ellipse cx="31" cy="10" rx="7" ry="3.4" fill="#8fce8b" transform="rotate(24 31 10)"/><circle cx="34" cy="17" r="2.4" fill="#fff" opacity=".9"/></svg></span>
+      <span><b>PoppingMango</b><small>Paperback sources</small></span>
+    </a>
+    <div class="topbar__links">
+      <a href="#paperback-0-9">0.9</a>
+      <a href="#paperback-0-8">0.8</a>
+      <a href="https://discord.com/invite/inkdex">Support</a>
+    </div>
+  </nav>
+
+  <div class="hero__copy">
+    <p class="eyebrow">A little pocket of summer</p>
+    <h1>Manga days,<br><span>mango skies.</span></h1>
+    <p class="hero__lede">Novels, manga, manhwa and manhua in one Popmango catalog. Choose the repository that matches your Paperback version, since 0.9 sources won’t work on 0.8.</p>
+    <div class="hero__actions">
+      <a class="button button--berry" href="#paperback-0-9">Browse Paperback 0.9</a>
+      <a class="button button--mango" href="#paperback-0-8">Browse Paperback 0.8</a>
+    </div>
+  </div>
+
+  <div class="hero__card" aria-hidden="true">
+    <span class="hero__sparkle">✦</span>
+    <span class="hero__mango"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="126" height="126" role="img" aria-label="PoppingMango"><defs><linearGradient id="mango-gradient" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd087"/><stop offset="1" stop-color="#ff9a61"/></linearGradient></defs><circle cx="24" cy="24" r="23" fill="#fff7dc"/><ellipse cx="23" cy="27" rx="13" ry="15" fill="url(#mango-gradient)"/><ellipse cx="18" cy="20" rx="3.5" ry="6" fill="#fff" opacity=".42"/><ellipse cx="31" cy="10" rx="7" ry="3.4" fill="#8fce8b" transform="rotate(24 31 10)"/><circle cx="34" cy="17" r="2.4" fill="#fff" opacity=".9"/></svg></span>
+    <span class="hero__caption">fresh sources<br>for sunny reads</span>
+  </div>
+</header>
+
+<section class="ticker" aria-label="Available sources">
+  <div class="ticker__fade ticker__fade--left"></div>
+  <div class="ticker__track" id="ticker-track"></div>
+  <div class="ticker__fade ticker__fade--right"></div>
+</section>
+
+<main>
+  <section class="compat">
+    <span class="compat__flower" aria-hidden="true">✿</span>
+    <p><b>Choose the version that matches Paperback.</b> A 0.9 extension cannot load in 0.8, and every 0.8 source here is implemented against the 0.8 API.</p>
+  </section>
+
+  <div class="catalog-tools">
+    <div>
+      <p class="eyebrow">Pick your favourites</p>
+      <h2>Both source gardens</h2>
+    </div>
+    <label class="search">
+      <span aria-hidden="true">⌕</span>
+      <input id="source-filter" type="search" placeholder="Search every source" autocomplete="off">
+    </label>
+  </div>
+
+  <div id="repo-sections"></div>
+</main>
+
+<footer class="footer">
+  <span aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="42" height="42" role="img" aria-label="PoppingMango"><defs><linearGradient id="mango-gradient" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd087"/><stop offset="1" stop-color="#ff9a61"/></linearGradient></defs><circle cx="24" cy="24" r="23" fill="#fff7dc"/><ellipse cx="23" cy="27" rx="13" ry="15" fill="url(#mango-gradient)"/><ellipse cx="18" cy="20" rx="3.5" ry="6" fill="#fff" opacity=".42"/><ellipse cx="31" cy="10" rx="7" ry="3.4" fill="#8fce8b" transform="rotate(24 31 10)"/><circle cx="34" cy="17" r="2.4" fill="#fff" opacity=".9"/></svg></span>
+  <p><b>PoppingMango Paperback Sources</b><br>Made with mango sunshine and a little bit of pink.</p>
+  <p class="footer__links"><a href="https://discord.com/invite/inkdex">Support Discord</a> · <a href="https://github.com/PoppingMangoSources/popmango-paperback-sources">GitHub</a></p>
+  <p class="footer__built">Catalog built 2026-08-29</p>
+</footer>
+
+<script id="repo-data" type="application/json">[{"name":"PoppingMango Extensions","label":"0.9","url":"https://poppingmangosources.github.io/general-extensions-mangago/0.9/test","github":"https://github.com/PoppingMangoSources/general-extensions-mangago","note":"The newest PoppingMango catalog for Paperback 0.9.","iconFolder":"static","sources":[{"name":"BunManga","description":"Extension that pulls content from bunmanga.com.","version":"1.0.0-alpha.4","icon":"icon.png","language":"en","contentRating":"ADULT","capabilities":[1,16,4,64],"badges":[],"developers":[{"name":"Popmango","github":"https://github.com/PoppingMangoSources"}],"id":"BunManga"},{"name":"Chikari","description":"Extension that pulls content from chikari.moe.","version":"1.0.0-alpha.8","icon":"icon.png","language":"en","contentRating":"SAFE","capabilities":[1,16,4,64,32],"badges":[],"developers":[{"name":"Popmango","github":"https://github.com/PoppingMangoSources"}],"id":"Chikari"},{"name":"Cocomic","description":"Extension that pulls content from cocomic.co.","version":"1.0.0-alpha.2","icon":"icon.png","language":"en","contentRating":"ADULT","capabilities":[1,16,4,64],"badges":[],"developers":[{"name":"Popmango","github":"https://github.com/PoppingMangoSources"}],"id":"Cocomic"},{"name":"Galaxy Manga","description":"Extension that pulls content from galaxymanga.io.","version":"1.0.0-alpha.2","icon":"icon.png","language":"en","contentRating":"MATURE","capabilities":[1,16,4,64,32],"badges":[],"developers":[{"name":"Popmango","github":"https://github.com/PoppingMangoSources"}],"id":"GalaxyManga"},{"name":"KaliScan","description":"Extension that pulls content from kaliscan.com and its mirrors.","version":"1.0.0-alpha.13","icon":"icon.png","language":"en","contentRating":"ADULT","capabilities":[1,16,4,64,32],"badges":[],"developers":[{"name":"Popmango","github":"https://github.com/PoppingMangoSources"}],"id":"KaliScan"},{"name":"KingOfShojo","description":"Extension that pulls content from kingofshojo.com.","version":"1.0.0-alpha.22","icon":"icon.png","language":"en","contentRating":"ADULT","capabilities":[1,16,4,64,32],"badges":[],"developers":[{"name":"Popmango","github":"https://github.com/PoppingMangoSources"}],"id":"KingOfShojo"},{"name":"LikeManga","description":"Extension that pulls content from likemanga.ink.","version":"1.0.0-alpha.8","icon":"icon.png","language":"en","contentRating":"ADULT","capabilities":[1,16,4,64],"badges":[],"developers":[{"name":"Popmango","github":"https://github.com/PoppingMangoSources"}],"id":"LikeManga"},{"name":"Lua Comic","description":"Extension that pulls comics from luacomic.org.","version":"1.0.0-alpha.15","icon":"icon.png","language":"en","contentRating":"MATURE","capabilities":[1,16,4,64,32],"badges":[],"developers":[{"name":"Popmango","github":"https://github.com/PoppingMangoSources"}],"id":"LuaComic"},{"name":"MangaBerri","description":"Extension that pulls content from mangaberri.com.","version":"1.0.0-alpha.2","icon":"icon.png","language":"en","contentRating":"MATURE","capabilities":[1,4,64,32],"badges":[],"developers":[{"name":"PopMango","github":"https://github.com/PoppingMangoSources"}],"id":"MangaBerri"},{"name":"MangaCherri","description":"Extension that pulls content from mangacherri.com.","version":"1.0.0-alpha.2","icon":"icon.png","language":"en","contentRating":"MATURE","capabilities":[1,4,64,32],"badges":[],"developers":[{"name":"PopMango","github":"https://github.com/PoppingMangoSources"}],"id":"MangaCherri"},{"name":"MangaHere","description":"Extension that pulls content from mangahere.cc.","version":"1.0.0-alpha.3","icon":"icons.png","language":"en","contentRating":"ADULT","capabilities":[1,16,4,64,32],"badges":[],"developers":[{"name":"Popmango","github":"https://github.com/PoppingMangoSources"}],"id":"MangaHere"},{"name":"MangaHome","description":"Extension that pulls content from mangahome.com.","version":"1.0.0-alpha.7","icon":"icon.png","language":"en","contentRating":"MATURE","capabilities":[1,16,4,64],"badges":[],"developers":[{"name":"PopMango","github":"https://github.com/PoppingMangoSources"}],"id":"MangaHome"},{"name":"MangaTown","description":"Extension that pulls content from mangatown.com.","version":"1.0.0-alpha.10","icon":"icon.png","language":"en","contentRating":"MATURE","capabilities":[1,16,4,64,32],"badges":[],"developers":[{"name":"Popmango","github":"https://github.com/PoppingMangoSources"}],"id":"MangaTown"},{"name":"MVLEMPYR","description":"Extension that pulls content from mvlempyr.io.","version":"1.0.0-alpha.6","icon":"icon.png","language":"en","contentRating":"MATURE","capabilities":[1,16,4,64,32],"badges":[{"label":"Novel","textColor":"#ffffff","backgroundColor":"#4fa06a"}],"developers":[{"name":"Popmango","github":"https://github.com/PoppingMangoSources"}],"id":"MVLEMPYR"},{"name":"MyReadingManga","description":"Extension that pulls content from myreadingmanga.info.","version":"1.0.0-alpha.11","icon":"icon.png","language":"multi","contentRating":"ADULT","capabilities":[1,16,4,64,32],"badges":[],"developers":[{"name":"Popmango","github":"https://github.com/PoppingMangoSources"}],"id":"MyReadingManga"},{"name":"NovelArchive","description":"Extension that pulls content from novelarchive.cc.","version":"1.0.0-alpha.57","icon":"icon.png","language":"en","contentRating":"ADULT","capabilities":[1,16,4,64,32],"badges":[{"label":"Novel","textColor":"#ffffff","backgroundColor":"#3baf4b"}],"developers":[{"name":"Popmango","github":"https://github.com/PoppingMangoSources"}],"id":"NovelArchive"},{"name":"NovelCool","description":"Extension that pulls content from novelcool.com.","version":"1.0.0-alpha.21","icon":"icons.png","language":"en","contentRating":"ADULT","capabilities":[1,16,4,64],"badges":[{"label":"Novel","textColor":"#ffffff","backgroundColor":"#4fa06a"},{"label":"Manga","textColor":"#ffffff","backgroundColor":"#d1477a"}],"developers":[{"name":"Popmango","github":"https://github.com/PoppingMangoSources"}],"id":"NovelCool"},{"name":"oManga","description":"Extension that pulls content from omanga.to.","version":"1.0.0-alpha.22","icon":"icon.png","language":"en","contentRating":"ADULT","capabilities":[1,16,4,64,32],"badges":[],"developers":[{"name":"Popmango","github":"https://github.com/PoppingMangoSources"}],"id":"OManga"},{"name":"Ranobes","description":"Extension that pulls light novels from ranobes.net.","version":"1.0.0-alpha.62","icon":"icon.png","language":"en","contentRating":"ADULT","capabilities":[1,16,4,64,32],"badges":[{"label":"Novel","textColor":"#ffffff","backgroundColor":"#4fa06a"}],"developers":[{"name":"Popmango","github":"https://github.com/PoppingMangoSources"}],"id":"Ranobes"},{"name":"ReiManga","description":"Extension that pulls content from reimanga.net.","version":"1.0.0-alpha.3","icon":"icon.png","language":"en","contentRating":"ADULT","capabilities":[1,16,4,64,32],"badges":[],"developers":[{"name":"Popmango","github":"https://github.com/PoppingMangoSources"}],"id":"ReiManga"},{"name":"RinkoComics","description":"Extension that pulls content from rinkocomics.com.","version":"1.0.0-alpha.18","icon":"icon.png","language":"en","contentRating":"SAFE","capabilities":[1,16,4,64,32],"badges":[],"developers":[{"name":"Popmango","github":"https://github.com/PoppingMangoSources"}],"id":"RinkoComics"},{"name":"RokariComics","description":"Extension that pulls content from rokaricomics.com.","version":"1.0.0-alpha.19","icon":"icon.png","language":"en","contentRating":"SAFE","capabilities":[1,16,4,64,32],"badges":[],"developers":[{"name":"Popmango","github":"https://github.com/PoppingMangoSources"}],"id":"RokariComics"},{"name":"Scans.GG","description":"Extension that pulls content from scans.gg.","version":"1.0.0-alpha.27","icon":"icon.png","language":"en","contentRating":"ADULT","capabilities":[1,16,4,64,32],"badges":[],"developers":[{"name":"Popmango","github":"https://github.com/PoppingMangoSources"}],"id":"ScansGG"},{"name":"StoneScape","description":"Extension that pulls content from stonescape.xyz.","version":"1.0.0-alpha.8","icon":"icon.png","language":"en","contentRating":"ADULT","capabilities":[1,16,4,64,32],"badges":[],"developers":[{"name":"Popmango","github":"https://github.com/PoppingMangoSources"}],"id":"StoneScape"},{"name":"Temple Scan","description":"Extension that pulls content from templetoons.com.","version":"1.0.0-alpha.22","icon":"icon.png","language":"en","contentRating":"ADULT","capabilities":[1,16,4,64,32],"badges":[],"developers":[{"name":"Popmango","github":"https://github.com/PoppingMangoSources"}],"id":"TempleScan"},{"name":"ValirScans","description":"Extension that pulls comics and novels from valirscans.org.","version":"1.0.0-alpha.18","icon":"icon.png","language":"en","contentRating":"MATURE","capabilities":[1,16,4,64,32],"badges":[],"developers":[{"name":"Popmango","github":"https://github.com/PoppingMangoSources"}],"id":"ValirScans"},{"name":"VyManga","description":"Extension that pulls content from mangavyvy.net and mangavyvy.com.","version":"1.0.0-alpha.21","icon":"icon.png","language":"en","contentRating":"ADULT","capabilities":[1,16,4,64,32],"badges":[],"developers":[{"name":"Popmango","github":"https://github.com/PoppingMangoSources"}],"id":"VyManga"},{"name":"XCOMIC","description":"Extension that pulls content from xcomic.me.","version":"1.0.0-alpha.47","icon":"icon.png","language":"multi","contentRating":"ADULT","capabilities":[1,16,4,64,32],"badges":[],"developers":[{"name":"Popmango","github":"https://github.com/PoppingMangoSources"}],"id":"XCOMIC"}]},{"name":"PoppingMango Sources","label":"0.8","url":"https://poppingmangosources.github.io/popmango-paperback-sources/all","github":"https://github.com/PoppingMangoSources/popmango-paperback-sources","note":"Sources rebuilt for the Paperback 0.8 runtime.","iconFolder":"includes","local":true,"sources":[{"id":"BunManga","name":"BunManga","author":"Popmango","desc":"Extension that pulls content from bunmanga.com.","website":"https://github.com/PoppingMangoSources","contentRating":"ADULT","version":"1.0.0","icon":"icon.png","tags":[{"text":"English","type":"info"}],"websiteBaseURL":"https://bunmanga.com","intents":21},{"id":"Chikari","name":"Chikari","author":"Popmango","desc":"Extension that pulls comics from chikari.moe.","website":"https://github.com/PoppingMangoSources","contentRating":"ADULT","version":"1.0.0","icon":"icon.png","tags":[{"text":"English","type":"info"}],"websiteBaseURL":"https://chikari.moe","intents":53},{"id":"Cocomic","name":"Cocomic","author":"Popmango","desc":"Extension that pulls content from cocomic.co.","website":"https://github.com/PoppingMangoSources","contentRating":"ADULT","version":"1.0.0","icon":"icon.png","tags":[{"text":"English","type":"info"}],"websiteBaseURL":"https://cocomic.co","intents":21},{"id":"GalaxyManga","name":"Galaxy Manga","author":"Popmango","desc":"Extension that pulls content from galaxymanga.io.","website":"https://github.com/PoppingMangoSources","contentRating":"MATURE","version":"1.0.0","icon":"icon.png","tags":[{"text":"English","type":"info"}],"websiteBaseURL":"https://galaxymanga.io","intents":53},{"id":"KaliScan","name":"KaliScan","author":"Popmango","desc":"Extension that pulls content from kaliscan.com and its mirrors.","website":"https://github.com/PoppingMangoSources","contentRating":"ADULT","version":"1.0.0","icon":"icon.png","tags":[{"text":"English","type":"info"}],"websiteBaseURL":"https://kaliscan.com","intents":53},{"id":"KingOfShojo","name":"King of Shojo","author":"Popmango","desc":"Extension that pulls content from kingofshojo.com.","website":"https://github.com/PoppingMangoSources","contentRating":"MATURE","version":"1.0.0","icon":"icon.png","tags":[{"text":"English","type":"info"}],"websiteBaseURL":"https://kingofshojo.com","intents":53},{"id":"LikeManga","name":"LikeManga","author":"Popmango","desc":"Extension that pulls content from likemanga.ink.","website":"https://github.com/PoppingMangoSources","contentRating":"ADULT","version":"1.0.0","icon":"icon.png","tags":[{"text":"English","type":"info"}],"websiteBaseURL":"https://likemanga.ink","intents":21},{"id":"LuaComic","name":"Lua Comic","author":"Popmango","desc":"Extension that pulls content from luacomic.org.","website":"https://github.com/PoppingMangoSources","contentRating":"ADULT","version":"1.0.0","icon":"icon.png","tags":[{"text":"English","type":"info"}],"websiteBaseURL":"https://luacomic.org","intents":53},{"id":"MangaBerri","name":"MangaBerri","author":"Popmango","desc":"Extension that pulls content from mangaberri.com.","website":"https://github.com/PoppingMangoSources","contentRating":"MATURE","version":"1.0.0","icon":"icon.png","tags":[{"text":"English","type":"info"}],"websiteBaseURL":"https://mangaberri.com","intents":37},{"id":"MangaCherri","name":"MangaCherri","author":"Popmango","desc":"Extension that pulls content from mangacherri.com.","website":"https://github.com/PoppingMangoSources","contentRating":"MATURE","version":"1.0.0","icon":"icon.png","tags":[{"text":"English","type":"info"}],"websiteBaseURL":"https://mangacherri.com","intents":37},{"id":"Mangago","name":"Mangago","author":"Popmango","desc":"Extension that pulls comics from mangago.me.","website":"https://github.com/PoppingMangoSources","contentRating":"ADULT","version":"1.0.0","icon":"icon.png","tags":[{"text":"English","type":"info"}],"websiteBaseURL":"https://www.mangago.me","intents":53},{"id":"MangaTown","name":"MangaTown","author":"Popmango","desc":"Extension that pulls content from mangatown.com.","website":"https://github.com/PoppingMangoSources","contentRating":"MATURE","version":"1.0.0","icon":"icon.png","tags":[{"text":"English","type":"info"}],"websiteBaseURL":"https://www.mangatown.com","intents":53},{"id":"MyReadingManga","name":"MyReadingManga","author":"Popmango","desc":"Extension that pulls content from myreadingmanga.info.","website":"https://github.com/PoppingMangoSources","contentRating":"ADULT","version":"1.0.0","icon":"icon.png","tags":[{"text":"English","type":"info"}],"websiteBaseURL":"https://myreadingmanga.info","intents":53},{"id":"OManga","name":"OManga","author":"Popmango","desc":"Extension that pulls content from omanga.to.","website":"https://github.com/PoppingMangoSources","contentRating":"ADULT","version":"1.0.0","icon":"icon.png","tags":[{"text":"English","type":"info"}],"websiteBaseURL":"https://omanga.to","intents":53},{"id":"ReiManga","name":"ReiManga","author":"Popmango","desc":"Extension that pulls content from reimanga.net.","website":"https://github.com/PoppingMangoSources","contentRating":"ADULT","version":"1.0.0","icon":"icon.png","tags":[{"text":"English","type":"info"}],"websiteBaseURL":"https://reimanga.net","intents":53},{"id":"RinkoComics","name":"RinkoComics","author":"Popmango","desc":"Extension that pulls comics from rinkocomics.com.","website":"https://github.com/PoppingMangoSources","contentRating":"EVERYONE","version":"1.0.0","icon":"icon.png","tags":[{"text":"English","type":"info"}],"websiteBaseURL":"https://rinkocomics.com","intents":53},{"id":"RokariComics","name":"Rokari Comics","author":"Popmango","desc":"Extension that pulls content from rokaricomics.com.","website":"https://github.com/PoppingMangoSources","contentRating":"EVERYONE","version":"1.0.0","icon":"icon.png","tags":[{"text":"English","type":"info"}],"websiteBaseURL":"https://rokaricomics.com","intents":53},{"id":"StoneScape","name":"StoneScape","author":"Popmango","desc":"Extension that pulls comics from stonescape.xyz.","website":"https://github.com/PoppingMangoSources","contentRating":"MATURE","version":"1.0.0","icon":"icon.png","tags":[{"text":"English","type":"info"}],"websiteBaseURL":"https://stonescape.xyz","intents":53},{"id":"TempleScan","name":"Temple Scan","author":"Popmango","desc":"Extension that pulls content from templetoons.com.","website":"https://github.com/PoppingMangoSources","contentRating":"ADULT","version":"1.0.0","icon":"icon.png","tags":[{"text":"English","type":"info"}],"websiteBaseURL":"https://templetoons.com","intents":53},{"id":"ValirScans","name":"Valir Scans","author":"Popmango","desc":"Extension that pulls comics from valirscans.org.","website":"https://github.com/PoppingMangoSources","contentRating":"MATURE","version":"1.0.0","icon":"icon.png","tags":[{"text":"English","type":"info"}],"websiteBaseURL":"https://valirscans.org","intents":53},{"id":"VyManga","name":"VyManga","author":"Popmango","desc":"Extension that pulls content from mangavyvy.net.","website":"https://github.com/PoppingMangoSources","contentRating":"MATURE","version":"1.0.0","icon":"icon.png","tags":[{"text":"English","type":"info"}],"websiteBaseURL":"https://mangavyvy.net","intents":53},{"id":"XCOMIC","name":"XCOMIC","author":"Popmango","desc":"Extension that pulls content from xcomic.me.","website":"https://github.com/PoppingMangoSources","contentRating":"ADULT","version":"1.0.0","icon":"icon.png","tags":[{"text":"English","type":"info"}],"websiteBaseURL":"https://xcomic.me","intents":53}]}]</script>
+<script>
+
+(function () {
+  "use strict";
+
+  var RATING = {
+    SAFE: { label: "Safe", tone: "safe" },
+    EVERYONE: { label: "Safe", tone: "safe" },
+    MATURE: { label: "16+", tone: "mature" },
+    ADULT: { label: "18+", tone: "adult" }
+  };
+
+  var repos = JSON.parse(document.getElementById("repo-data").textContent);
+  var sections = document.getElementById("repo-sections");
+  var ticker = document.getElementById("ticker-track");
+  var filterInput = document.getElementById("source-filter");
+
+  function esc(value) {
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  function sortSources(list) {
+    return (list || []).filter(Boolean).slice().sort(function (a, b) {
+      return String(a.name).localeCompare(String(b.name));
+    });
+  }
+
+  function base(repo) {
+    return repo.local ? "." : repo.url.replace(/\/+$/, "");
+  }
+
+  function iconUrl(repo, source) {
+    return base(repo) + "/" + encodeURIComponent(source.id) + "/" +
+      encodeURIComponent(repo.iconFolder) + "/" + encodeURIComponent(source.icon || "icon.png");
+  }
+
+  function addRepoLink(repo) {
+    return "paperback://addRepo?displayName=" + encodeURIComponent(repo.name) +
+      "&url=" + encodeURIComponent(repo.url);
+  }
+
+  function installLink(repo, ids) {
+    return "paperback://installExtensions?data=" +
+      btoa(JSON.stringify(ids.map(function (id) { return [id, repo.url]; })));
+  }
+
+  function ratingFor(source) {
+    return RATING[String(source.contentRating || "").toUpperCase()] ||
+      { label: String(source.contentRating || ""), tone: "safe" };
+  }
+
+  function sourceCard(repo, source) {
+    var rating = ratingFor(source);
+    return '<a class="source-card" href="' + esc(installLink(repo, [source.id])) +
+      '" title="Install ' + esc(source.name) + '">' +
+      '<img src="' + esc(iconUrl(repo, source)) + '" alt="" width="54" height="54" loading="lazy">' +
+      '<span class="source-card__copy"><b>' + esc(source.name) + '</b>' +
+      '<span><span>v' + esc(source.version) + '</span>' +
+      (rating.label ? '<i class="rating rating--' + rating.tone + '">' + esc(rating.label) + '</i>' : "") +
+      '</span></span><span class="source-card__add" aria-hidden="true">+</span></a>';
+  }
+
+  function repositorySection(repo, index, query) {
+    var known = Array.isArray(repo.sources);
+    var list = known ? sortSources(repo.sources) : [];
+    var shown = query ? list.filter(function (source) {
+      return String(source.name).toLowerCase().indexOf(query) !== -1;
+    }) : list;
+    var id = "paperback-" + repo.label.replace(".", "-");
+    var count = known ? String(list.length) : "…";
+    var body;
+
+    if (!known) {
+      body = '<p class="empty">Loading this source garden…</p>';
+    } else if (shown.length === 0) {
+      body = '<p class="empty">No sources here match your search.</p>';
+    } else {
+      body = '<div class="source-scroll"><div class="source-grid">' +
+        shown.map(function (source) { return sourceCard(repo, source); }).join("") +
+        '</div><span class="source-scroll__rail" aria-hidden="true">' +
+        '<span class="source-scroll__thumb"></span></span></div>';
+    }
+
+    return '<section class="repository repository--' + (index === 0 ? "mango" : "berry") +
+      '" id="' + id + '">' +
+      '<div class="repository__head"><div>' +
+      '<p class="repository__kicker">Paperback ' + esc(repo.label) + '</p>' +
+      '<h3>' + esc(repo.name) + ' <span>' + count + ' sources</span></h3>' +
+      '<p>' + esc(repo.note) + '</p></div>' +
+      '<div class="repository__actions">' +
+      '<a class="button button--' + (index === 0 ? "mango" : "berry") +
+      '" href="' + esc(addRepoLink(repo)) + '">Add repository</a>' +
+      '<a class="button button--paper" href="' + esc(repo.github) + '">View on GitHub</a>' +
+      '</div></div>' + body + '</section>';
+  }
+
+  function renderSections() {
+    var query = filterInput.value.trim().toLowerCase();
+    sections.innerHTML = repos.map(function (repo, index) {
+      return repositorySection(repo, index, query);
+    }).join("");
+    updateScrollbars();
+  }
+
+  function updateScrollbar(container) {
+    var viewport = container.querySelector(".source-grid");
+    var rail = container.querySelector(".source-scroll__rail");
+    var thumb = container.querySelector(".source-scroll__thumb");
+    var scrollable = viewport.scrollHeight > viewport.clientHeight + 1;
+
+    rail.hidden = !scrollable;
+    if (!scrollable) return;
+
+    var railHeight = rail.clientHeight;
+    var thumbHeight = Math.max(42, railHeight * viewport.clientHeight / viewport.scrollHeight);
+    var available = Math.max(0, railHeight - thumbHeight);
+    var progress = viewport.scrollTop / Math.max(1, viewport.scrollHeight - viewport.clientHeight);
+    thumb.style.height = thumbHeight + "px";
+    thumb.style.transform = "translateY(" + (available * progress) + "px)";
+  }
+
+  function updateScrollbars() {
+    Array.prototype.forEach.call(document.querySelectorAll(".source-scroll"), function (container) {
+      var viewport = container.querySelector(".source-grid");
+      updateScrollbar(container);
+      if (viewport.dataset.scrollbarReady !== "true") {
+        viewport.dataset.scrollbarReady = "true";
+        viewport.addEventListener("scroll", function () { updateScrollbar(container); }, { passive: true });
+      }
+    });
+  }
+
+  function tickerItem(repo, source) {
+    return '<a class="ticker__item" href="' + esc(installLink(repo, [source.id])) + '">' +
+      '<img src="' + esc(iconUrl(repo, source)) + '" alt="" width="38" height="38">' +
+      '<span><b>' + esc(source.name) + '</b><small>Paperback ' + esc(repo.label) + '</small></span></a>';
+  }
+
+  function renderTicker() {
+    var items = [];
+    repos.forEach(function (repo) {
+      sortSources(repo.sources).forEach(function (source) {
+        items.push(tickerItem(repo, source));
+      });
+    });
+    if (!items.length) {
+      ticker.hidden = true;
+      return;
+    }
+    var set = '<div class="ticker__set">' + items.join("") + '</div>';
+    var duplicate = set
+      .replace('<div class="ticker__set">', '<div class="ticker__set" aria-hidden="true">')
+      .replace(/<a class=/g, '<a tabindex="-1" class=');
+    ticker.innerHTML = set + duplicate;
+  }
+
+  function refresh(repo) {
+    fetch(base(repo) + "/versioning.json", { cache: "no-cache" })
+      .then(function (response) {
+        if (!response.ok) throw new Error(String(response.status));
+        return response.json();
+      })
+      .then(function (manifest) {
+        repo.sources = sortSources(manifest.sources);
+        renderSections();
+        renderTicker();
+      })
+      .catch(function () {
+        if (!Array.isArray(repo.sources)) {
+          repo.sources = [];
+          renderSections();
+          renderTicker();
+        }
+      });
+  }
+
+  filterInput.addEventListener("input", renderSections);
+  window.addEventListener("resize", updateScrollbars);
+  renderSections();
+  renderTicker();
+  repos.forEach(refresh);
+})();
+
+</script>
+</body>
+</html>
