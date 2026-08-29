@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Copyright © 2026 Popmango */
 
-import type { Cookie, Request, Response, SourceInterceptor, SourceStateManager } from "@paperback/types";
+import type { Cookie, RawData, Request, Response, SourceInterceptor, SourceStateManager } from "@paperback/types";
 
 import { headerValue } from "./Cloudflare";
 import { hostOf } from "./UrlBuilder";
@@ -255,6 +255,28 @@ export class InterceptorChain implements SourceInterceptor {
             return response;
         }
 
+        // Written onto the response the app handed over, not onto a copy of
+        // it. Every 0.8 source that rebuilds an image assigns back to this
+        // object and returns it unchanged, so that is the path known to work;
+        // nothing shows the runtime reads the object that comes back instead.
+        // A host that will not be written to falls through to the copy below.
+        try {
+            const mutable = response as { data?: string; rawData?: RawData; mimeType?: string };
+
+            mutable.data = body.text;
+            mutable.rawData = body.raw;
+
+            if (contentTypeChanged) {
+                mutable.mimeType = body.contentType;
+                // The headers object is edited in place for the same reason.
+                setContentType(response.headers, body.contentType ?? "");
+            }
+
+            return response;
+        } catch {
+            // Frozen, or the fields are accessors that refuse a write.
+        }
+
         // Rebuilt field by field rather than spread, so nothing is lost if the
         // host hands these back on a prototype instead of as own properties.
         const rebuilt: Response = {
@@ -267,10 +289,6 @@ export class InterceptorChain implements SourceInterceptor {
             request: response.request,
         };
 
-        // The app decides how to read a body by its type as well as by its
-        // bytes, and it looks for that type in a field the 0.8 declarations do
-        // not mention. Sources that rebuild an image set it anyway, and an
-        // image handed back without it is read as whatever it used to be.
         if (contentTypeChanged) {
             (rebuilt as { mimeType?: string }).mimeType = body.contentType;
         }
@@ -280,12 +298,24 @@ export class InterceptorChain implements SourceInterceptor {
 }
 
 /**
- * Replaces the content type, leaving the other headers as they were.
+ * Sets the content type on a headers object, in place.
  *
  * Every existing spelling is removed first, then the type is set under both
- * the lower-cased and the capitalised name — which is what the app has been
- * seen to look for, and it does not agree with itself about which.
+ * the lower-cased and the capitalised name, because the app has been seen to
+ * read it under either.
  */
+function setContentType(headers: Record<string, unknown>, contentType: string): void {
+    for (const key of Object.keys(headers ?? {})) {
+        if (key.toLowerCase() === "content-type") {
+            delete headers[key];
+        }
+    }
+
+    headers["content-type"] = contentType;
+    headers["Content-Type"] = contentType;
+}
+
+/** The same, as a copy, for a headers object that cannot be written to. */
 function withContentType(headers: Record<string, unknown>, contentType: string): Record<string, unknown> {
     const next: Record<string, unknown> = {};
 

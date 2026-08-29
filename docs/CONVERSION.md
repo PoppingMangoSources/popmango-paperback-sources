@@ -124,10 +124,15 @@ the first place, and one that needs particular headers on the second hop tries
 each candidate host itself rather than following a redirect blindly.
 
 **Rebuilt images.** A source that unscrambles or decrypts a page image hands
-back bytes in a different format from the ones that arrived, and the app goes
-by the declared type rather than by the bytes. An interceptor returns the new
-type alongside the new bytes and the chain sets it on the response; without
-that the reader tries to read a rebuilt image as whatever it used to be.
+back bytes in a different format from the ones that arrived. The app does sniff
+the bytes — a PNG rebuilt from a JPEG is read correctly with nothing declared —
+so the type is set alongside the new bytes as insurance for the formats sniffing
+may not cover, not because the common case needs it.
+
+The new bytes are written onto the response the app handed over, and that same
+object is returned. Assigning to it is the path 0.8 sources actually take;
+returning a different object is untried, so the chain only falls back to one if
+the original refuses to be written to.
 
 **Home page updates.** 0.9 can invalidate the home page after a setting
 changes. 0.8 decides for itself when to rebuild, so
