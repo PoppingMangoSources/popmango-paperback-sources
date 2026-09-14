@@ -58,7 +58,7 @@ import { absoluteUrl, canonicalReaderUrl } from "./urls";
 export const MangagoInfo = sourceInfo({
     name: "Mangago",
     description: "Extension that pulls comics from mangago.me.",
-    version: "1.0.0",
+    version: "1.0.1",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DOMAIN,

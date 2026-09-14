@@ -36,10 +36,6 @@ import {
 const pageCache = new Map<string, string[]>();
 const scriptCache = new Map<string, string>();
 
-/** The shortest gap between two reader fetches, so a walk is not seen as a flood. */
-const READER_FETCH_INTERVAL_MS = 350;
-let lastReaderFetch = 0;
-
 /** How many times a reader page is asked for before it is given up on. */
 const READER_FETCH_ROUNDS = 3;
 
@@ -48,14 +44,6 @@ interface ReaderScript {
     keyHex: string;
     ivHex: string;
     cols: number;
-}
-
-async function paceReaderFetch(): Promise<void> {
-    const wait = READER_FETCH_INTERVAL_MS - (Date.now() - lastReaderFetch);
-    if (wait > 0) {
-        await new Promise<void>((resolve) => setTimeout(resolve, wait));
-    }
-    lastReaderFetch = Date.now();
 }
 
 /** How many images the chapter has, however the page happens to say it. */
@@ -221,7 +209,6 @@ async function fetchReaderPage(
 
     for (let round = 1; round <= READER_FETCH_ROUNDS; round += 1) {
         try {
-            await paceReaderFetch();
             const { html } = await fetchPage(url, {
                 "user-agent": READER_USER_AGENT,
                 ...READER_NAVIGATION_HEADERS,
@@ -238,10 +225,6 @@ async function fetchReaderPage(
             if (error instanceof CloudflareError) {
                 challenge = error;
             }
-        }
-
-        if (round < READER_FETCH_ROUNDS) {
-            await new Promise<void>((resolve) => setTimeout(resolve, 400 * round));
         }
     }
 
