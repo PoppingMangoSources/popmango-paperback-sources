@@ -320,10 +320,10 @@ export function parseMangaDetails($: CheerioAPI, mangaId: string): SourceManga {
         mangaInfo: {
             primaryTitle,
             secondaryTitles: [],
-            thumbnailUrl: absoluteUrl($("meta[property=og:image]").first().attr("content") ?? ""),
+            thumbnailUrl: absoluteUrl($('meta[property="og:image"]').first().attr("content") ?? ""),
             synopsis: text(
                 $(".comic-synopsis").first().text() ||
-                    $("meta[property=og:description]").first().attr("content") ||
+                    $('meta[property="og:description"]').first().attr("content") ||
                     "",
             ),
             author: authors[0],

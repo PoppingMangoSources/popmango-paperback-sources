@@ -59,7 +59,7 @@ import {
 export const RinkoComicsInfo = sourceInfo({
     name: "RinkoComics",
     description: "Extension that pulls comics from rinkocomics.com.",
-    version: "1.0.0",
+    version: "1.0.1",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DOMAIN,
@@ -292,7 +292,7 @@ export class RinkoComics extends PopmangoSource {
     }
 
     private comicsUrl(page: number) {
-        const url = URL(DOMAIN).addPathComponent("comics");
+        const url = URL(DOMAIN).addPathComponent("comic");
         if (page > 1) {
             url.setQueryItem("paged", page);
         }
