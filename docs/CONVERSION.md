@@ -117,6 +117,24 @@ chapter list are usually the same page, a refetch would mean asking for it
 twice; `Application` reuses a response fetched in the last few seconds so it is
 asked for once.
 
+**User agents.** The app makes every request through Apple's own network
+stack, so the connection looks like Safari whatever the `user-agent` header
+says. A header claiming Chrome, Windows or Android disagrees with the
+connection underneath it, and a strict firewall treats that as a bot. A source
+that needs a particular agent should prefer an Apple one — a Mac Safari agent
+where it needs a desktop page, an iPhone one otherwise.
+
+Mangago is the exception for now: its reader is asked for as desktop Chrome,
+which is the agent the site is known to answer with the whole chapter. It goes
+through the same Apple stack under 0.9 as well, so the mismatch is not new; if
+its reader starts coming back challenged, a Mac Safari agent is the first thing
+to try.
+
+**Settings objects.** The app keeps its own handle on each settings row,
+binding and section, but not one the JavaScript collector can see, so a
+closure the app has yet to call can be collected and the screen opens empty.
+`common/Menu.ts` holds everything it builds so that cannot happen.
+
 **Timers.** There is no `setTimeout` in the 0.8 runtime, and no `setInterval`
 either — a source cannot wait. Throttling is therefore the app's job:
 `rateLimit` is converted to the `requestsPerSecond` the request manager takes,

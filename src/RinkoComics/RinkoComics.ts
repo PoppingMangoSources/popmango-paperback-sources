@@ -59,7 +59,7 @@ import {
 export const RinkoComicsInfo = sourceInfo({
     name: "RinkoComics",
     description: "Extension that pulls comics from rinkocomics.com.",
-    version: "1.0.2",
+    version: "1.0.3",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DOMAIN,

@@ -87,7 +87,7 @@ import { bindSite, getDomain } from "./site";
 export const OMangaInfo = sourceInfo({
     name: "OManga",
     description: "Extension that pulls content from omanga.to.",
-    version: "1.0.1",
+    version: "1.0.2",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DEFAULT_DOMAIN,

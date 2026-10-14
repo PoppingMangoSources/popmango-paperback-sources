@@ -58,7 +58,7 @@ import {
 export const ReiMangaInfo = sourceInfo({
     name: "ReiManga",
     description: "Extension that pulls content from reimanga.net.",
-    version: "1.0.1",
+    version: "1.0.2",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DOMAIN,
