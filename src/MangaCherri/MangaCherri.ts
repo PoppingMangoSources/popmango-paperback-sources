@@ -56,7 +56,7 @@ import {
 export const MangaCherriInfo = sourceInfo({
     name: "MangaCherri",
     description: "Extension that pulls content from mangacherri.com.",
-    version: "1.0.0",
+    version: "1.0.1",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DOMAIN,

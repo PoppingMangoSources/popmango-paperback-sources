@@ -62,7 +62,7 @@ import {
 export const CocomicInfo = sourceInfo({
     name: "Cocomic",
     description: "Extension that pulls content from cocomic.co.",
-    version: "1.0.0",
+    version: "1.0.1",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DOMAIN,

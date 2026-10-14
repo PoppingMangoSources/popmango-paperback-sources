@@ -1,6 +1,8 @@
 {
     "compilerOptions": {
         "target": "ES2017",
+        "lib": ["ES2017"],
+        "types": [],
         "module": "ES2015",
         "moduleResolution": "bundler",
         "resolveJsonModule": true,

@@ -68,7 +68,7 @@ import { baseUrl, bindSite } from "./site";
 export const KaliScanInfo = sourceInfo({
     name: "KaliScan",
     description: "Extension that pulls content from kaliscan.com and its mirrors.",
-    version: "1.0.0",
+    version: "1.0.1",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DOMAIN,

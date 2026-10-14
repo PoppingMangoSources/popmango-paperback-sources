@@ -35,7 +35,6 @@ import {
 } from "./Convert";
 import { isRenderableSection } from "./Discover";
 import {
-    BasicRateLimiter,
     CookieStorageInterceptor,
     InterceptorChain,
     PaperbackInterceptor,
@@ -67,7 +66,15 @@ export interface SourceOptions {
      * anything needs them; see `SettingsStore`.
      */
     settingsKeys?: readonly string[];
-    /** Throttling. Left off, requests are not spaced out at all. */
+    /**
+     * Throttling, as a number of requests per interval in seconds.
+     *
+     * 0.8 throttles in the app rather than in the source — there is no timer
+     * in the runtime to wait on — so this is converted to the requests-per-
+     * second the request manager takes. `ignoreImages` is accepted because
+     * sources were written with it, but the app's throttle counts every
+     * request, so page images are spaced out along with everything else.
+     */
     rateLimit?: { numberOfRequests: number; bufferInterval: number; ignoreImages?: boolean };
     /** The source's own interceptor, if it needs one. */
     interceptor?: PaperbackInterceptor;
@@ -137,7 +144,6 @@ export abstract class PopmangoSource
                 : 4,
             requestTimeout: (options.requestTimeout ?? 20) * 1000,
             interceptor: new InterceptorChain({
-                rateLimiter: options.rateLimit ? new BasicRateLimiter(options.rateLimit) : undefined,
                 cookieStorage: this.cookieStorage,
                 interceptor: options.interceptor,
             }),

@@ -65,7 +65,7 @@ import {
 export const LikeMangaInfo = sourceInfo({
     name: "LikeManga",
     description: "Extension that pulls content from likemanga.ink.",
-    version: "1.0.0",
+    version: "1.0.1",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DOMAIN,

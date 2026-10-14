@@ -76,7 +76,7 @@ import {
 export const MangaTownInfo = sourceInfo({
     name: "MangaTown",
     description: "Extension that pulls content from mangatown.com.",
-    version: "1.0.0",
+    version: "1.0.1",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DOMAIN,

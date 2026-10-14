@@ -363,11 +363,6 @@ class ApplicationRuntime {
         // Intentionally empty; see above.
     }
 
-    /** Waits for a number of seconds. */
-    async sleep(seconds: number): Promise<void> {
-        await new Promise<void>((resolve) => setTimeout(resolve, Math.max(0, seconds) * 1000));
-    }
-
     /**
      * The user agent the app uses for its own requests.
      *

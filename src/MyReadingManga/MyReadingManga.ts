@@ -57,7 +57,7 @@ import {
 export const MyReadingMangaInfo = sourceInfo({
     name: "MyReadingManga",
     description: "Extension that pulls content from myreadingmanga.info.",
-    version: "1.0.0",
+    version: "1.0.1",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DOMAIN,

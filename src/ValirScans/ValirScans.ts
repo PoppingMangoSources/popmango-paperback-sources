@@ -74,7 +74,7 @@ import { bindBaseUrl } from "./site";
 export const ValirScansInfo = sourceInfo({
     name: "Valir Scans",
     description: "Extension that pulls comics from valirscans.org.",
-    version: "1.0.0",
+    version: "1.0.1",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DOMAIN,

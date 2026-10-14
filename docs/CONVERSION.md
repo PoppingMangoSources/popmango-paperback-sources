@@ -117,6 +117,19 @@ chapter list are usually the same page, a refetch would mean asking for it
 twice; `Application` reuses a response fetched in the last few seconds so it is
 asked for once.
 
+**Timers.** There is no `setTimeout` in the 0.8 runtime, and no `setInterval`
+either — a source cannot wait. Throttling is therefore the app's job:
+`rateLimit` is converted to the `requestsPerSecond` the request manager takes,
+and nothing in a source paces itself. A retry loop retries immediately or not
+at all.
+
+This one is worth being careful about, because the typechecker does not help.
+`@types/node` declares the timer functions globally and cheerio pulls those
+declarations in, so `setTimeout` compiles cleanly and then fails on a device
+with `ReferenceError: Can't find variable: setTimeout`. `npm run check` scans
+the built bundles for these globals instead, which is the only place the
+mistake is visible.
+
 **Redirects.** 0.9 reports the URL a request finally landed on and lets a
 source re-apply its headers to a redirect target. 0.8 reports neither, so a
 source that needs to know where it ended up asks for the canonical address in

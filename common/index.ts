@@ -13,7 +13,6 @@ export { parseChapterNumber, parseDate } from "./Dates";
 export { DiscoverSectionType } from "./Types";
 export { Capability, SourceKind, sourceInfo, type SourceDescription } from "./Info";
 export {
-    BasicRateLimiter,
     CookieStorageInterceptor,
     PaperbackInterceptor,
     type InterceptedRequest,

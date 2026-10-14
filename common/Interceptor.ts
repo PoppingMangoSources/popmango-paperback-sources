@@ -7,9 +7,6 @@ import { headerValue } from "./Cloudflare";
 import { hostOf } from "./UrlBuilder";
 import type { ResponseBody } from "./Runtime";
 
-/** Matches URLs that point at an image, so they can skip throttling. */
-const IMAGE_URL = /\.(avif|bmp|gif|jpe?g|jxl|png|svg|webp)(?:[/?#]|$)/i;
-
 /**
  * A request on its way out, in the shape sources work with.
  *
@@ -48,59 +45,6 @@ export abstract class PaperbackInterceptor {
         body: ResponseBody,
     ): Promise<ResponseBody> {
         return body;
-    }
-}
-
-/**
- * Spaces requests out so a source does not hammer a site.
- *
- * Allows `numberOfRequests` per `bufferInterval` seconds. Because the queue is
- * a single promise chain, requests are also serialised in the order they were
- * made, which keeps a burst from arriving out of sequence.
- */
-export class BasicRateLimiter {
-    private readonly numberOfRequests: number;
-    private readonly bufferInterval: number;
-    private readonly ignoreImages: boolean;
-
-    /** Timestamps of the requests still inside the current window. */
-    private recent: number[] = [];
-    /** Serialises callers so two of them cannot claim the same slot. */
-    private queue: Promise<void> = Promise.resolve();
-
-    constructor(options: { numberOfRequests: number; bufferInterval: number; ignoreImages?: boolean }) {
-        this.numberOfRequests = Math.max(1, options.numberOfRequests);
-        this.bufferInterval = Math.max(0, options.bufferInterval);
-        this.ignoreImages = options.ignoreImages ?? false;
-    }
-
-    /** Resolves once the caller is allowed to send its request. */
-    async wait(url: string): Promise<void> {
-        if (this.bufferInterval === 0 || (this.ignoreImages && IMAGE_URL.test(url))) {
-            return;
-        }
-
-        const turn = this.queue.then(() => this.claimSlot());
-        // Swallow the result so one rejected caller cannot poison the queue.
-        this.queue = turn.catch(() => undefined);
-        return turn;
-    }
-
-    private async claimSlot(): Promise<void> {
-        const windowMs = this.bufferInterval * 1000;
-        const now = Date.now();
-        this.recent = this.recent.filter((at) => now - at < windowMs);
-
-        if (this.recent.length >= this.numberOfRequests) {
-            const oldest = this.recent[0] ?? now;
-            const waitFor = windowMs - (now - oldest);
-            if (waitFor > 0) {
-                await new Promise<void>((resolve) => setTimeout(resolve, waitFor));
-            }
-            this.recent = this.recent.filter((at) => Date.now() - at < windowMs);
-        }
-
-        this.recent.push(Date.now());
     }
 }
 
@@ -180,23 +124,18 @@ export class CookieStorageInterceptor {
  * throw.
  */
 export class InterceptorChain implements SourceInterceptor {
-    private readonly rateLimiter?: BasicRateLimiter;
     private readonly cookieStorage?: CookieStorageInterceptor;
     private readonly interceptor?: PaperbackInterceptor;
 
     constructor(options: {
-        rateLimiter?: BasicRateLimiter;
         cookieStorage?: CookieStorageInterceptor;
         interceptor?: PaperbackInterceptor;
     }) {
-        this.rateLimiter = options.rateLimiter;
         this.cookieStorage = options.cookieStorage;
         this.interceptor = options.interceptor;
     }
 
     async interceptRequest(request: Request): Promise<Request> {
-        await this.rateLimiter?.wait(request.url);
-
         let intercepted: InterceptedRequest = {
             url: request.url,
             method: request.method,

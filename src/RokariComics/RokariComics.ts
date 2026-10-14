@@ -62,7 +62,7 @@ import {
 export const RokariComicsInfo = sourceInfo({
     name: "Rokari Comics",
     description: "Extension that pulls content from rokaricomics.com.",
-    version: "1.0.0",
+    version: "1.0.1",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DOMAIN,
