@@ -307,7 +307,7 @@ export function parseChapterList(
                 sourceManga,
                 langCode: "🇬🇧",
                 chapNum: isFinite(number) ? number : index + 1,
-                title: locked ? (rawTitle.length > 0 ? `${rawTitle} 🔒` : "🔒") : rawTitle || undefined,
+                title: locked ? (rawTitle.length > 0 ? `${rawTitle} (LOCKED)` : "(LOCKED)") : rawTitle || undefined,
                 volume: 0,
                 sortingIndex: index,
                 publishDate: parseDate(chapter.releaseDate ?? chapter.createdAt),

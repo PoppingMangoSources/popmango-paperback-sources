@@ -416,7 +416,7 @@ export function parseChapterElements(
         // listed while staying unreadable.
         let chapterId = rawUrl.length > 0 ? parsePath(rawUrl) : `locked-${postId}`;
         if (locked) {
-            title = title.length > 0 ? `${title} 🔒` : "🔒";
+            title = title.length > 0 ? `${title} (LOCKED)` : "(LOCKED)";
             chapterId += LOCK_SUFFIX;
         }
 

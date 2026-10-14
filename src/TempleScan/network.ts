@@ -22,14 +22,15 @@ export class TempleScanInterceptor extends PaperbackInterceptor {
     override async interceptRequest(request: InterceptedRequest): Promise<InterceptedRequest> {
         // Some covers live on third-party hosts whose hotlink protection swaps
         // in a placeholder when a foreign referer is attached; only claim the
-        // site as referer on its own hosts.
+        // site as referer on its own hosts. No origin header goes out at all:
+        // the site's firewall answers anything carrying one with a 403.
         const firstParty = FIRST_PARTY.test(request.url);
 
         return {
             ...request,
             headers: {
                 ...request.headers,
-                ...(firstParty ? { referer: `${DOMAIN}/`, origin: DOMAIN } : {}),
+                ...(firstParty ? { referer: `${DOMAIN}/` } : {}),
                 "user-agent": await Application.getDefaultUserAgent(),
             },
         };

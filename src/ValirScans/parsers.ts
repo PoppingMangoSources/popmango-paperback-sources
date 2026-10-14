@@ -301,7 +301,7 @@ function chapterTitle(chapter: ValirChapterItem): string {
     if (!chapterIsLocked(chapter)) {
         return title;
     }
-    return title.length > 0 ? `${title} 🔒` : "🔒";
+    return title.length > 0 ? `${title} (LOCKED)` : "(LOCKED)";
 }
 
 export function parseChapters(

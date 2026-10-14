@@ -295,7 +295,7 @@ function chapterTitle(chapter: SeasonChapter): string {
     if (!chapterIsPaid(chapter)) {
         return title;
     }
-    return title.length > 0 ? `${title} 🔒` : "🔒";
+    return title.length > 0 ? `${title} (LOCKED)` : "(LOCKED)";
 }
 
 function updateCardSubtitle(chapter: SeasonChapter): string {

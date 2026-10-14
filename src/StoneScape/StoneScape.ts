@@ -66,7 +66,7 @@ import {
 export const StoneScapeInfo = sourceInfo({
     name: "StoneScape",
     description: "Extension that pulls comics from stonescape.xyz.",
-    version: "1.0.2",
+    version: "1.0.3",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DOMAIN,
