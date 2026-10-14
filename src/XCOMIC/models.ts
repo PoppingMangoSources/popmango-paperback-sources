@@ -4,30 +4,90 @@
 
 import { DiscoverSectionType, type DiscoverSection, type Tag } from "../../common";
 
+/** Every host serving the same catalogue; the first is the default. */
+export const MIRRORS: Tag[] = [
+    { id: "https://xcomic.me", title: "xcomic.me" },
+    { id: "https://xcomic.net", title: "xcomic.net" },
+    { id: "https://yona.to", title: "yona.to" },
+    { id: "https://comik.to", title: "comik.to" },
+];
+export const MIRROR_IDS = MIRRORS.map((mirror) => mirror.id);
 export const DOMAIN = "https://xcomic.me";
-export const API_URL = `${DOMAIN}/query/`;
 
-export const PAGE_SIZE = 36;
+export const PAGE_SIZE = 48;
+/** Upper bound on upload-feed pages walked when filtering empties one. */
+export const MAX_LATEST_REQUESTS = 10;
 export const CHAPTER_PAGE_SIZE = 1000;
 export const RECENTLY_ADDED_SIZE = 50;
+export const RANDOM_AMOUNT = 12;
 
-/** Upper bound on latest-upload pages walked when filtering empties a page. */
-export const MAX_LATEST_REQUESTS = 10;
+export const TITLE_BROWSE_PAGER_QUERY = `
+query get_title_browse_pager($select: Title_Browse_Select) {
+  get_title_browse_pager(select: $select) {
+    next
+  }
+}
+`;
 
-export const BROWSE_QUERY = `
-query get_comic_browse_items($select: Comic_Browse_Select) {
-  get_comic_browse_items(select: $select) {
+export const TITLE_BROWSE_ITEMS_QUERY = `
+query get_title_browse_items($select: Title_Browse_Select) {
+  get_title_browse_items(select: $select) {
     data {
-      id name
-      urlCover
-      translatedLanguage
-      type contentRating genres tags
-      summary { html }
-      sfw_result score_val chaps_normal
-      chapterNodes_last(amount: 1) {
-        data {
-          serial chaNum
-        }
+      id
+      name: title
+      altNames: alt_titles
+      nativeTitle: native_title
+      romanizedTitle: romanized_title
+      originalLanguage: original_language
+      contentRating: content_rating_id
+      type: type_id
+      genres: genre_ids
+      tags: format_ids
+      description
+      urlCover: cover_local_url
+      remoteCoverUrl: cover_url
+      urlPath
+      totalChapters: total_chapters
+      follows: total_follows
+      reviews: total_reviews
+      comments_total: total_comments
+      translatedLanguages: translated_languages
+      score_val: vote_val
+    }
+    comicNodes {
+      data {
+        id name subName urlPath translatedLanguage chaps_normal
+      }
+    }
+  }
+}
+`;
+
+export const TITLE_RANDOM_QUERY = `
+query get_title_randomList($select: Title_RandomList_Select) {
+  get_title_randomList(select: $select) {
+    data {
+      id
+      name: title
+      altNames: alt_titles
+      nativeTitle: native_title
+      romanizedTitle: romanized_title
+      originalLanguage: original_language
+      contentRating: content_rating_id
+      type: type_id
+      genres: genre_ids
+      tags: format_ids
+      description
+      urlCover: cover_local_url
+      remoteCoverUrl: cover_url
+      urlPath
+      totalChapters: total_chapters
+      translatedLanguages: translated_languages
+      score_val: vote_val
+    }
+    comicNodes {
+      data {
+        id name subName urlPath translatedLanguage chaps_normal
       }
     }
   }
@@ -35,21 +95,22 @@ query get_comic_browse_items($select: Comic_Browse_Select) {
 `;
 
 export const LATEST_UPLOADS_QUERY = `
-query get_comic_latestUploads($select: Comic_LatestUploads_Select) {
-  get_comic_latestUploads(select: $select) {
+query get_title_latestUploads($select: Title_LatestUploads_Select) {
+  get_title_latestUploads(select: $select) {
     before
     items {
-      comic {
-        data {
-          id name urlPath urlCover
-          translatedLanguage
-          type contentRating genres tags sfw_result
-        }
-      }
-      chapters(amount: 1) {
+      chapters(amount: 3) {
+        id
         data {
           id serial chaNum urlPath
-          dateCreate dateModify datePublic
+          dbStatus dateCreate dateModify datePublic
+          comicNode {
+            data {
+              id name subName urlPath urlCover
+              originalLanguage translatedLanguage
+              type contentRating genres tags sfw_result
+            }
+          }
         }
       }
     }
@@ -57,15 +118,69 @@ query get_comic_latestUploads($select: Comic_LatestUploads_Select) {
 }
 `;
 
+// The site lists newly added titles here, not newly added editions, so one work
+// appears once. comicNodes is ours: the site only links to a title page, and an
+// edition is what can actually be opened.
 export const RECENTLY_ADDED_QUERY = `
-query get_comic_recentlyAdded($select: Comic_RecentlyAdded_Select) {
-  get_comic_recentlyAdded(select: $select) {
+query get_title_recentlyAdded($select: Title_RecentlyAdded_Select) {
+  get_title_recentlyAdded(select: $select) {
     before
     items {
       data {
-        id name urlPath urlCover
-        translatedLanguage
-        type contentRating genres tags sfw_result
+        id
+        name: title
+        altNames: alt_titles
+        originalLanguage: original_language
+        contentRating: content_rating_id
+        type: type_id
+        genres: genre_ids
+        tags: format_ids
+        urlCover: cover_local_url
+        remoteCoverUrl: cover_url
+        urlPath
+        totalChapters: total_chapters
+        translatedLanguages: translated_languages
+      }
+      comicNodes {
+        data {
+          id name subName urlPath translatedLanguage chaps_normal
+        }
+      }
+    }
+  }
+}
+`;
+
+// A title's own record, which browse does not carry: it names every edition
+// and, when the site has merged duplicate entries, the title that kept them.
+export const TITLE_NODE_QUERY = `
+query get_title_titleNode($id: ID!) {
+  get_title_titleNode(id: $id) {
+    data {
+      id
+      name: title
+      altNames: alt_titles
+      nativeTitle: native_title
+      romanizedTitle: romanized_title
+      originalLanguage: original_language
+      contentRating: content_rating_id
+      type: type_id
+      genres: genre_ids
+      tags: format_ids
+      demographics: demographic_ids
+      description
+      urlCover: cover_local_url
+      remoteCoverUrl: cover_url
+      urlPath
+      totalChapters: total_chapters
+      translatedLanguages: translated_languages
+      score_val: vote_val
+      isMerged: is_merged
+      mergedTo: merged_to
+    }
+    comicNodes {
+      data {
+        id name subName urlPath translatedLanguage chaps_normal
       }
     }
   }
@@ -76,7 +191,7 @@ export const COMIC_QUERY = `
 query get_comicNode($id: ID!) {
   get_comicNode(id: $id) {
     data {
-      id name altNames
+      id name subName altNames
       originalLanguage translatedLanguage
       originalStatus originalPubFrom { y m d }
       originalPubTill { y m d }
@@ -94,6 +209,8 @@ query get_comicNode($id: ID!) {
 }
 `;
 
+// paging exposes "total pages page init size skip limit prev next"; pages is
+// the one wanted here.
 export const CHAPTERS_QUERY = `
 query get_comic_chapterList_uniqList($select: Select_Comic_ChapterList_UniqList) {
   get_comic_chapterList_uniqList(select: $select) {
@@ -121,27 +238,34 @@ query get_chapterNode($id: ID!) {
 }
 `;
 
-/** Ids for the home page sections. */
 export const SECTIONS = {
     TOP_RATED: "top-rated",
+    RANDOM: "random",
+    MOST_FOLLOWS: "most-follows",
+    MOST_REVIEWS: "most-reviews",
     LATEST_UPLOADS: "latest-uploads",
     RECENTLY_ADDED: "recently-added",
+    MOST_COMMENTS: "most-comments",
+    MOST_CHAPTERS: "most-chapters",
 } as const;
 
 export type SectionId = (typeof SECTIONS)[keyof typeof SECTIONS];
 
 /**
- * The home page sections.
+ * The home page rows.
  *
- * 0.9 also showed strips of links into the view charts and the genre list.
- * 0.8 has no tile that can hold a link, so both moved to the search filters.
+ * The site's genre rail is left out: 0.8 has no tile that can hold a link to a
+ * search, and the genres are all reachable as search filters instead.
  */
 export const DISCOVER_SECTIONS: Record<SectionId, DiscoverSection> = {
-    [SECTIONS.TOP_RATED]: {
-        id: SECTIONS.TOP_RATED,
-        title: "Top Rated",
-        type: DiscoverSectionType.featured,
+    [SECTIONS.TOP_RATED]: { id: SECTIONS.TOP_RATED, title: "Top Rated", type: DiscoverSectionType.featured },
+    [SECTIONS.RANDOM]: { id: SECTIONS.RANDOM, title: "Random Comics", type: DiscoverSectionType.prominentCarousel },
+    [SECTIONS.MOST_FOLLOWS]: {
+        id: SECTIONS.MOST_FOLLOWS,
+        title: "Most Followed",
+        type: DiscoverSectionType.prominentCarousel,
     },
+    [SECTIONS.MOST_REVIEWS]: { id: SECTIONS.MOST_REVIEWS, title: "Most Reviewed", type: DiscoverSectionType.featured },
     [SECTIONS.LATEST_UPLOADS]: {
         id: SECTIONS.LATEST_UPLOADS,
         title: "Latest Uploads",
@@ -152,39 +276,77 @@ export const DISCOVER_SECTIONS: Record<SectionId, DiscoverSection> = {
         title: "Recently Added",
         type: DiscoverSectionType.simpleCarousel,
     },
+    [SECTIONS.MOST_COMMENTS]: {
+        id: SECTIONS.MOST_COMMENTS,
+        title: "Most Commented",
+        type: DiscoverSectionType.featured,
+    },
+    [SECTIONS.MOST_CHAPTERS]: {
+        id: SECTIONS.MOST_CHAPTERS,
+        title: "Most Chapters",
+        type: DiscoverSectionType.simpleCarousel,
+    },
 };
 
 export const SECTION_IDS: SectionId[] = Object.values(SECTIONS);
+export const SECTION_OPTIONS = SECTION_IDS.map((id) => ({ id, title: DISCOVER_SECTIONS[id].title }));
 
-export const SECTION_OPTIONS: Array<{ id: string; title: string }> = SECTION_IDS.map((id) => ({
-    id,
-    title: DISCOVER_SECTIONS[id].title,
-}));
+/** Rows added since a reader last chose which to show, offered to them unasked. */
+export const SECTIONS_ADDED_SINCE_LAST_CHOICE: SectionId[] = [
+    SECTIONS.RANDOM,
+    SECTIONS.MOST_FOLLOWS,
+    SECTIONS.MOST_CHAPTERS,
+    SECTIONS.MOST_REVIEWS,
+    SECTIONS.MOST_COMMENTS,
+];
 
-/** Setting keys, declared so the store can read them up front. */
 export const STATE_KEYS = {
+    ACTIVE_BASE_URL: "xcomic_active_base_url",
+    BASE_URL: "xcomic_base_url",
     CONTENT_RATINGS: "xcomic_content_ratings",
     CONTENT_TYPES: "xcomic_content_types",
     EXCLUDED_GENRES: "xcomic_excluded_genres",
     EXCLUDED_FORMATS: "xcomic_excluded_formats",
-    LANGUAGES: "xcomic_languages",
+    LETTER_MATCHING: "xcomic_letter_matching",
+    ORIGINAL_LANGUAGES: "xcomic_original_languages",
+    SHOW_EDITION_IN_TITLE: "xcomic_show_edition_in_title",
+    TRANSLATED_LANGUAGES: "xcomic_languages",
+    VISIBLE_SECTIONS_VERSION: "xcomic_visible_sections_version",
     VISIBLE_SECTIONS: "xcomic_visible_sections",
 } as const;
 
 export const SETTINGS_KEYS = Object.values(STATE_KEYS);
 
+export const VISIBLE_SECTIONS_VERSION = 3;
+
 export type ContentPreferenceRating = "safe" | "suggestive" | "erotica" | "pornographic";
 
-/** Genres that raise a title above the rating the site declares for it. */
-export const CONTENT_RATING_GENRES = {
+/** Genres that imply a rating, for titles whose own rating understates them. */
+export const CONTENT_RATING_GENRES: Record<Exclude<ContentPreferenceRating, "safe">, readonly string[]> = {
     suggestive: ["ecchi", "mature", "yaoi", "yuri"],
     erotica: ["adult", "erotica", "smut"],
     pornographic: ["hentai", "pornographic"],
-} as const satisfies Record<Exclude<ContentPreferenceRating, "safe">, readonly string[]>;
+};
 
-export type SeriesType = "artbook" | "cartoon" | "imageset" | "manga" | "manhua" | "manhwa" | "western";
+export type SeriesType = "cartoon" | "imageset" | "manga" | "manhua" | "manhwa" | "oel" | "other" | "western";
 
-export type WorkStatus = "pending" | "ongoing" | "completed" | "hiatus" | "cancelled";
+export const LEGACY_TYPE_MAP: Record<string, SeriesType> = {
+    artbook: "other",
+    novel: "other",
+};
+
+/**
+ * Default type sets earlier releases shipped.
+ *
+ * A reader still carrying one of them in full never chose it, so they get the
+ * current default rather than silently losing the types it did not list.
+ */
+export const LEGACY_DEFAULT_TYPE_SETS: string[][] = [
+    ["artbook", "cartoon", "imageset", "manga", "manhua", "manhwa", "western"],
+    ["manhwa", "manga", "manhua", "other", "oel", "novel"],
+];
+
+export const LEGACY_FORMAT_MAP: Record<string, string> = { long_strip: "longstrip" };
 
 export type GenreMode = "and" | "or";
 
@@ -192,28 +354,42 @@ export interface XComicPreferences {
     contentRatings: ContentPreferenceRating[];
     excludedFormats: string[];
     excludedGenres: string[];
-    languages: string[];
+    originalLanguages: string[];
+    translatedLanguages: string[];
     types: SeriesType[];
 }
 
-export const DEFAULT_CONTENT_RATINGS: ContentPreferenceRating[] = [
-    "safe",
-    "suggestive",
-    "erotica",
-    "pornographic",
-];
+export type RankedMetric = "top" | "follows" | "reviews" | "comments" | "chapters";
 
-export const DEFAULT_CONTENT_TYPES: SeriesType[] = [
-    "artbook",
-    "cartoon",
-    "imageset",
-    "manga",
-    "manhua",
-    "manhwa",
-    "western",
-];
-
+export const DEFAULT_CONTENT_RATINGS: ContentPreferenceRating[] = ["safe", "suggestive", "erotica", "pornographic"];
 export const DEFAULT_LANGUAGES: string[] = ["en"];
+
+export const CONTENT_TYPE_OPTIONS: Array<{ id: SeriesType; title: string }> = [
+    { id: "cartoon", title: "Cartoon" },
+    { id: "imageset", title: "Imageset" },
+    { id: "manga", title: "Manga" },
+    { id: "manhua", title: "Manhua" },
+    { id: "manhwa", title: "Manhwa" },
+    { id: "oel", title: "OEL" },
+    { id: "other", title: "Other" },
+    { id: "western", title: "Western" },
+];
+export const DEFAULT_CONTENT_TYPES: SeriesType[] = CONTENT_TYPE_OPTIONS.map(({ id }) => id);
+
+export const DEMOGRAPHIC_OPTIONS: Tag[] = [
+    { id: "shounen", title: "Shounen(B)" },
+    { id: "shoujo", title: "Shoujo(G)" },
+    { id: "seinen", title: "Seinen(M)" },
+    { id: "josei", title: "Josei(W)" },
+    { id: "kodomo", title: "Kodomo(Kid)" },
+    { id: "silver_golden", title: "Silver & Golden" },
+    { id: "non_human", title: "Non-human" },
+    { id: "male_oriented", title: "Male Oriented" },
+    { id: "female_oriented", title: "Female Oriented" },
+    { id: "male_demographic_with_female_author", title: "Male Demographic with Female Author" },
+    { id: "male_demographic_with_female_lead", title: "Male Demographic with Female Lead" },
+    { id: "female_demographic_with_male_lead", title: "Female Demographic with Male Lead" },
+];
 
 export const CONTENT_RATING_OPTIONS: Array<{ id: ContentPreferenceRating; title: string }> = [
     { id: "safe", title: "Safe" },
@@ -222,20 +398,11 @@ export const CONTENT_RATING_OPTIONS: Array<{ id: ContentPreferenceRating; title:
     { id: "pornographic", title: "Pornographic" },
 ];
 
-export const CONTENT_TYPE_OPTIONS: Array<{ id: SeriesType; title: string }> = [
-    { id: "manga", title: "Manga" },
-    { id: "manhwa", title: "Manhwa" },
-    { id: "manhua", title: "Manhua" },
-    { id: "western", title: "Western" },
-    { id: "cartoon", title: "Cartoon" },
-    { id: "artbook", title: "Artbook" },
-    { id: "imageset", title: "Image Set" },
-];
-
-// The app's series model has no language field, so the chapter language rides
-// in additionalInfo. Both the writer and the reader use this constant, so the
-// two can never drift apart.
+/** Where the edition's language rides, since series details have no field for it. */
 export const TRANSLATED_LANGUAGE_KEY = "Translated Language";
+
+/** Where the edition's team rides, since the chapter list carries no series data. */
+export const EDITION_TEAM_KEY = "Team";
 
 /** Only ids whose display name differs from title-casing the id itself. */
 export const TAG_TITLE_OVERRIDES: Record<string, string> = {
@@ -243,20 +410,13 @@ export const TAG_TITLE_OVERRIDES: Record<string, string> = {
     non_human: "Non-human",
 };
 
-export const STATUS_OPTIONS: Array<{ id: WorkStatus; title: string }> = [
-    { id: "pending", title: "Pending" },
-    { id: "ongoing", title: "Ongoing" },
-    { id: "completed", title: "Completed" },
-    { id: "hiatus", title: "Hiatus" },
-    { id: "cancelled", title: "Cancelled" },
-];
-
 export const MODE_OPTIONS: Array<{ id: GenreMode; title: string }> = [
     { id: "and", title: "Match all" },
     { id: "or", title: "Match any" },
 ];
 
-export const CHAPTER_COUNT_OPTIONS: Array<{ id: string; title: string }> = [
+export const CHAPTER_COUNT_OPTIONS: Tag[] = [
+    { id: "", title: "Any" },
     { id: "0", title: "0" },
     { id: "1", title: "1+" },
     { id: "10", title: "10+" },
@@ -285,31 +445,182 @@ export const CHAPTER_COUNT_OPTIONS: Array<{ id: string; title: string }> = [
     { id: "200-299", title: "200–299" },
 ];
 
-export const FORMAT_OPTIONS: Array<{ id: string; title: string }> = [
-    { id: "4_koma", title: "4 Koma" },
+// The site's taxonomy is a large but stable list, kept here rather than
+// scraped from a search page the site now renders client-side. Ids match the
+// values the API filters on and the tag ids a details page exposes, so a
+// tapped tag round-trips into search.
+export const GENRE_OPTIONS: Tag[] = [
+    { id: "action", title: "Action" },
+    { id: "adult", title: "Adult" },
+    { id: "adventure", title: "Adventure" },
+    { id: "age_gap", title: "Age Gap" },
+    { id: "aliens", title: "Aliens" },
+    { id: "animals", title: "Animals" },
+    { id: "art_by_ai", title: "Art-by-AI" },
+    { id: "bara", title: "Bara" },
+    { id: "beasts", title: "Beasts" },
+    { id: "blackmail", title: "Blackmail" },
+    { id: "bloody", title: "Bloody" },
+    { id: "bodyswap", title: "Bodyswap" },
+    { id: "boys", title: "Boys" },
+    { id: "boys_love", title: "Boys Love" },
+    { id: "brocon_siscon", title: "Brocon Siscon" },
+    { id: "cars", title: "Cars" },
+    { id: "cheating_infidelity", title: "Cheating/Infidelity" },
+    { id: "childhood_friends", title: "Childhood Friends" },
+    { id: "college_life", title: "College life" },
+    { id: "comedy", title: "Comedy" },
+    { id: "comic", title: "Comic" },
+    { id: "contest_winning", title: "Contest winning" },
+    { id: "cooking", title: "Cooking" },
+    { id: "crime", title: "Crime" },
+    { id: "crossdressing", title: "Crossdressing" },
+    { id: "cultivation", title: "Cultivation" },
+    { id: "death_game", title: "Death Game" },
+    { id: "degeneratemc", title: "Degeneratemc" },
+    { id: "delinquents", title: "Delinquents" },
+    { id: "dementia", title: "Dementia" },
+    { id: "demons", title: "Demons" },
+    { id: "drama", title: "Drama" },
+    { id: "dungeons", title: "Dungeons" },
+    { id: "ecchi", title: "Ecchi" },
+    { id: "emperors_daughter", title: "Emperor's Daughter" },
+    { id: "fantasy", title: "Fantasy" },
+    { id: "female_protagonists", title: "Female-protagonists" },
+    { id: "fetish", title: "Fetish" },
+    { id: "futa", title: "Futa" },
+    { id: "game", title: "Game" },
+    { id: "genderswap", title: "Genderswap" },
+    { id: "ghosts", title: "Ghosts" },
+    { id: "girls", title: "Girls" },
+    { id: "girls_love", title: "Girls Love" },
+    { id: "gore", title: "Gore" },
+    { id: "gyaru", title: "Gyaru" },
+    { id: "harem", title: "Harem" },
+    { id: "harlequin", title: "Harlequin" },
+    { id: "hentai", title: "Hentai" },
+    { id: "historical", title: "Historical" },
+    { id: "horror", title: "Horror" },
+    { id: "incest", title: "Incest" },
+    { id: "isekai", title: "Isekai" },
+    { id: "kids", title: "Kids" },
+    { id: "loli", title: "Loli" },
+    { id: "mafia", title: "Mafia" },
+    { id: "magic", title: "Magic" },
+    { id: "magical_girls", title: "Magical Girls" },
+    { id: "mahjong", title: "Mahjong" },
+    { id: "male_protagonists", title: "Male-protagonists" },
+    { id: "martial_arts", title: "Martial Arts" },
+    { id: "master_servant", title: "Master-Servant" },
+    { id: "mature", title: "Mature" },
+    { id: "mecha", title: "Mecha" },
+    { id: "medical", title: "Medical" },
+    { id: "milf", title: "Milf" },
+    { id: "military", title: "Military" },
+    { id: "monster_girls", title: "Monster Girls" },
+    { id: "monsters", title: "Monsters" },
+    { id: "music", title: "Music" },
+    { id: "mystery", title: "Mystery" },
+    { id: "netorare_ntr", title: "Netorare/NTR" },
+    { id: "netori", title: "Netori" },
+    { id: "ninja", title: "Ninja" },
+    { id: "office_workers", title: "Office Workers" },
+    { id: "omegaverse", title: "Omegaverse" },
+    { id: "parody", title: "Parody" },
+    { id: "philosophical", title: "Philosophical" },
+    { id: "police", title: "Police" },
+    { id: "post_apocalyptic", title: "Post-Apocalyptic" },
+    { id: "psychological", title: "Psychological" },
+    { id: "regression", title: "Regression" },
+    { id: "reincarnation", title: "Reincarnation" },
+    { id: "revenge", title: "Revenge" },
+    { id: "reverse_harem", title: "Reverse Harem" },
+    { id: "reverse_isekai", title: "Reverse Isekai" },
+    { id: "romance", title: "Romance" },
+    { id: "royal_family", title: "Royal family" },
+    { id: "royalty", title: "Royalty" },
+    { id: "samurai", title: "Samurai" },
+    { id: "school_life", title: "School Life" },
+    { id: "sci_fi", title: "Sci-Fi" },
+    { id: "sexual_violence", title: "Sexual Violence" },
+    { id: "shota", title: "Shota" },
+    { id: "shoujo_ai", title: "Shoujo ai" },
+    { id: "shounen_ai", title: "Shounen ai" },
+    { id: "showbiz", title: "Showbiz" },
+    { id: "slice_of_life", title: "Slice of Life" },
+    { id: "sm_bdsm_sub_dom", title: "SM/BDSM/SUB-DOM" },
+    { id: "smut", title: "Smut" },
+    { id: "space", title: "Space" },
+    { id: "sports", title: "Sports" },
+    { id: "spy", title: "Spy" },
+    { id: "step_family", title: "Step-family" },
+    { id: "story_by_ai", title: "Story-by-AI" },
+    { id: "super_power", title: "Super Power" },
+    { id: "superhero", title: "Superhero" },
+    { id: "supernatural", title: "Supernatural" },
+    { id: "survival", title: "Survival" },
+    { id: "teacher_student", title: "Teacher-Student" },
+    { id: "thriller", title: "Thriller" },
+    { id: "time_travel", title: "Time Travel" },
+    { id: "tower_climbing", title: "Tower Climbing" },
+    { id: "traditional_games", title: "Traditional Games" },
+    { id: "tragedy", title: "Tragedy" },
+    { id: "transmigration", title: "Transmigration" },
+    { id: "vampires", title: "Vampires" },
+    { id: "video_games", title: "Video Games" },
+    { id: "villainess", title: "Villainess" },
+    { id: "violence", title: "Violence" },
+    { id: "virtual_reality", title: "Virtual Reality" },
+    { id: "wuxia", title: "Wuxia" },
+    { id: "xianxia", title: "Xianxia" },
+    { id: "xuanhuan", title: "Xuanhuan" },
+    { id: "yakuzas", title: "Yakuzas" },
+    { id: "youkai", title: "Youkai" },
+    { id: "zombies", title: "Zombies" },
+];
+
+export const FORMAT_OPTIONS: Tag[] = [
+    { id: "1_koma", title: "1-Koma" },
+    { id: "2_koma", title: "2-koma" },
+    { id: "3_koma", title: "3-koma" },
+    { id: "4_koma", title: "4-Koma" },
     { id: "adaptation", title: "Adaptation" },
     { id: "anthology", title: "Anthology" },
+    { id: "artbook", title: "Artbook" },
     { id: "award_winning", title: "Award Winning" },
     { id: "doujinshi", title: "Doujinshi" },
     { id: "fan_colored", title: "Fan Colored" },
+    { id: "fanbook", title: "Fanbook" },
+    { id: "fanwork", title: "Fanwork" },
     { id: "full_color", title: "Full Color" },
+    { id: "guidebook", title: "Guidebook" },
+    { id: "illustbook", title: "Illustbook" },
+    { id: "illustration_book", title: "Illustration Book" },
+    { id: "japanese_novel", title: "Japanese Novel" },
+    { id: "light_novel", title: "Light Novel" },
     { id: "long_strip", title: "Long Strip" },
+    { id: "longstrip", title: "Longstrip" },
+    { id: "novels", title: "Novels" },
     { id: "official_colored", title: "Official Colored" },
     { id: "oneshot", title: "Oneshot" },
+    { id: "original_doujinshi", title: "Original Doujinshi" },
+    { id: "partially_colored", title: "Partially Colored" },
+    { id: "partially_colored_webtoon", title: "Partially Colored Webtoon" },
     { id: "web_comic", title: "Web Comic" },
+    { id: "web_novel", title: "Web Novel" },
     { id: "webtoon", title: "Webtoon" },
 ];
 
-export interface FilterOptions {
-    contentRatings: Tag[];
-    demographics: Tag[];
-    genres: Tag[];
-    types: Tag[];
-}
+export const STATUS_OPTIONS: Tag[] = [
+    { id: "releasing", title: "Releasing" },
+    { id: "completed", title: "Completed" },
+    { id: "hiatus", title: "Hiatus" },
+    { id: "cancelled", title: "Cancelled" },
+    { id: "upcoming", title: "Upcoming" },
+    { id: "unknown", title: "Unknown" },
+];
 
-// English first, then alphabetical, matching the site's own picker; "Other"
-// (_t) last.
-export const LANGUAGE_OPTIONS: Array<{ id: string; title: string }> = [
+export const LANGUAGE_OPTIONS: Tag[] = [
     { id: "en", title: "English" },
     { id: "ab", title: "Abkhazian" },
     { id: "af", title: "Afrikaans" },
@@ -327,8 +638,7 @@ export const LANGUAGE_OPTIONS: Array<{ id: string; title: string }> = [
     { id: "ca", title: "Catalan" },
     { id: "ceb", title: "Cebuano" },
     { id: "zh", title: "Chinese" },
-    { id: "zh_hk", title: "Chinese (Cantonese)" },
-    { id: "zh_tw", title: "Chinese (Traditional)" },
+    { id: "zh_hk", title: "Chinese (T)" },
     { id: "cv", title: "Chuvash" },
     { id: "hr", title: "Croatian" },
     { id: "cs", title: "Czech" },
@@ -379,7 +689,7 @@ export const LANGUAGE_OPTIONS: Array<{ id: string; title: string }> = [
     { id: "fa", title: "Persian" },
     { id: "pl", title: "Polish" },
     { id: "pt", title: "Portuguese" },
-    { id: "pt_br", title: "Portuguese (Brazil)" },
+    { id: "pt_br", title: "Portuguese (BR)" },
     { id: "ro", title: "Romanian" },
     { id: "ru", title: "Russian" },
     { id: "sr", title: "Serbian" },
@@ -390,7 +700,7 @@ export const LANGUAGE_OPTIONS: Array<{ id: string; title: string }> = [
     { id: "sl", title: "Slovenian" },
     { id: "so", title: "Somali" },
     { id: "es", title: "Spanish" },
-    { id: "es_419", title: "Spanish (Latin America)" },
+    { id: "es_419", title: "Spanish (LA)" },
     { id: "ss", title: "Swati" },
     { id: "sv", title: "Swedish" },
     { id: "ta", title: "Tamil" },
@@ -409,56 +719,45 @@ export const LANGUAGE_OPTIONS: Array<{ id: string; title: string }> = [
     { id: "_t", title: "Other" },
 ];
 
-/** The site's view charts, one per window. */
-export const MOST_VIEWS_OPTIONS: Array<{ id: string; title: string }> = [
-    { id: "views_d000", title: "Most viewed (all time)" },
-    { id: "views_d360", title: "Most viewed (360 days)" },
-    { id: "views_d180", title: "Most viewed (180 days)" },
-    { id: "views_d090", title: "Most viewed (90 days)" },
-    { id: "views_d030", title: "Most viewed (30 days)" },
-    { id: "views_d007", title: "Most viewed (7 days)" },
-    { id: "views_h024", title: "Most viewed (24 hours)" },
-    { id: "views_h012", title: "Most viewed (12 hours)" },
-    { id: "views_h006", title: "Most viewed (6 hours)" },
-    { id: "views_h001", title: "Most viewed (1 hour)" },
-];
-
-export const SORT_OPTIONS: Array<{ id: string; title: string }> = [
-    { id: "field_score", title: "Rating Score" },
-    { id: "field_update", title: "Latest Update" },
-    { id: "field_create", title: "Recently Added" },
+export const SORT_OPTIONS: Tag[] = [
+    { id: "field_score", title: "Rating score" },
+    { id: "field_update", title: "Latest update" },
+    { id: "field_create", title: "Recently added" },
     { id: "field_name_asc", title: "Name A-Z" },
     { id: "field_name_desc", title: "Name Z-A" },
-    { id: "field_chapter", title: "Most Chapters" },
-    { id: "field_follow", title: "Most Follows" },
-    { id: "field_review", title: "Most Reviews" },
-    { id: "field_comment", title: "Most Comments" },
+    { id: "field_chapter", title: "Most chapters" },
+    { id: "field_follow", title: "Most follows" },
+    { id: "field_review", title: "Most reviews" },
+    { id: "field_comment", title: "Most comments" },
 ];
 
-/** Ids of the filter sections shown on the search screen. */
+/** Search filter sections, whose ids namespace the tags inside them. */
 export const FILTERS = {
     SORT: "sort",
-    VIEWS: "views",
+    TYPE: "type",
+    RATING: "rating",
     GENRE: "genre",
     FORMAT: "format",
-    DEMOGRAPHIC: "demographic",
-    ORIG_STATUS: "origstatus",
-    SITE_STATUS: "sitestatus",
+    DEMOGRAPHIC: "demo",
+    INC_MODE: "incmode",
+    EXC_MODE: "excmode",
+    ORIG_STATUS: "ostatus",
     CHAPTERS: "chapters",
     TLANG: "tlang",
     OLANG: "olang",
-    INC_MODE: "incmode",
-    EXC_MODE: "excmode",
 } as const;
 
-/** Separates a filter section id from the value within it. */
 export const FILTER_SEPARATOR = "::";
 
+/**
+ * Builds a tag that remembers which filter it came from.
+ *
+ * 0.8 hands back one flat list of chosen tags, so the section rides in the id.
+ */
 export function filterTag(section: string, id: string, title: string): Tag {
     return { id: `${section}${FILTER_SEPARATOR}${id}`, title };
 }
 
-/** Splits a tag id back into the section it belongs to and its own value. */
 export function splitFilterTag(tagId: string): { section: string; value: string } | undefined {
     const index = tagId.indexOf(FILTER_SEPARATOR);
     if (index <= 0) {
@@ -475,12 +774,10 @@ export interface PageMetadata {
     page?: number;
 }
 
-/** Everything the browse query accepts. */
 export interface BrowseSelect {
-    where: "browse";
+    where: "browse" | "letter";
     page: number;
     size: number;
-    init: number;
     sortby: string;
     word: string;
     incOLangs: string[];
@@ -495,7 +792,6 @@ export interface BrowseSelect {
     releaseYearMin: number | null;
     releaseYearMax: number | null;
     origStatus: string | null;
-    siteStatus: string | null;
     chapCount: string | null;
     ignoreGlobalULangs: boolean;
     ignoreGlobalGenres: boolean;
@@ -509,9 +805,7 @@ interface DateYmd {
 }
 
 interface NamedNode {
-    data?: {
-        name?: string;
-    } | null;
+    data?: { name?: string } | null;
 }
 
 export interface ChapterData {
@@ -529,6 +823,7 @@ export interface ChapterData {
     profileNodes?: Array<NamedNode | null> | null;
     userNode?: NamedNode | null;
     groupNodes?: Array<NamedNode | null> | null;
+    comicNode?: ComicNode | null;
 }
 
 export interface ChapterNode {
@@ -536,7 +831,6 @@ export interface ChapterNode {
 }
 
 interface LatestUploadItem {
-    comic?: ComicNode | null;
     chapters?: ChapterNode[] | null;
 }
 
@@ -548,15 +842,20 @@ export interface LatestUploadsResult {
 export interface ComicData {
     id: string;
     name: string;
+    /** The edition or team label the site hangs off a comic when a title has several. */
+    subName?: string | null;
     altNames?: string[] | null;
+    nativeTitle?: string | null;
+    romanizedTitle?: string | null;
     originalLanguage?: string | null;
     translatedLanguage?: string | null;
+    translatedLanguages?: string[] | null;
     originalStatus?: string | null;
     originalPubFrom?: DateYmd | null;
     originalPubTill?: DateYmd | null;
     originalPubZone?: string | null;
     uploadStatus?: string | null;
-    type?: SeriesType | null;
+    type?: string | null;
     demographics?: string[] | null;
     contentRating?: string | null;
     genres?: string[] | null;
@@ -566,37 +865,59 @@ export interface ComicData {
     tagNodes?: NamedNode[] | null;
     publisherNodes?: NamedNode[] | null;
     summary?: { html?: string | null } | null;
+    description?: string | null;
     urlPath?: string | null;
     urlCover?: string | null;
+    remoteCoverUrl?: string | null;
     sfw_result?: boolean | null;
     score_val?: number | null;
     follows?: number | null;
     reviews?: number | null;
     comments_total?: number | null;
     chaps_normal?: number | null;
+    totalChapters?: number | null;
     chapterNodes_last?: ChapterNode[] | null;
+    /** Set on a title the site has folded into another, which names the one that kept the editions. */
+    isMerged?: boolean | null;
+    mergedTo?: string | null;
 }
 
 export interface ComicNode {
     data: ComicData;
+    comicNodes?: Array<ComicNode | null> | null;
 }
 
-export interface BrowseResponse {
-    get_comic_browse_items?: ComicNode[] | null;
+export interface TitleRandomResponse {
+    get_title_randomList?: ComicNode[] | null;
 }
+
+export interface TitleBrowseItemsResponse {
+    get_title_browse_items?: ComicNode[] | null;
+}
+
+export interface TitleBrowsePagerResponse {
+    get_title_browse_pager?: { next?: number | null } | null;
+}
+
+export type TitleBrowseResponse = TitleBrowseItemsResponse & TitleBrowsePagerResponse;
 
 export interface LatestUploadsResponse {
-    get_comic_latestUploads?: LatestUploadsResult | null;
+    get_title_latestUploads?: LatestUploadsResult | null;
 }
 
 export interface RecentlyAddedResponse {
-    get_comic_recentlyAdded?: {
+    get_title_recentlyAdded?: {
+        before?: number | null;
         items?: ComicNode[] | null;
     } | null;
 }
 
 export interface ComicNodeResponse {
     get_comicNode?: ComicNode | null;
+}
+
+export interface TitleNodeResponse {
+    get_title_titleNode?: ComicNode | null;
 }
 
 interface ChapterListResult {
@@ -610,9 +931,7 @@ export interface ChapterListResponse {
 
 export interface ChapterPagesResponse {
     get_chapterNode?: {
-        data?: {
-            imageUrls?: string[] | null;
-        } | null;
+        data?: { imageUrls?: string[] | null } | null;
     } | null;
 }
 
