@@ -15,35 +15,26 @@ export const MIRROR_IDS = MIRRORS.map((mirror) => mirror.id);
 export const DOMAIN = "https://xcomic.me";
 
 export const PAGE_SIZE = 48;
+/** A page of a home row: about what a row shows before "view more", with half the covers to load. */
+export const HOME_ROW_SIZE = 24;
 /** Upper bound on upload-feed pages walked when filtering empties one. */
 export const MAX_LATEST_REQUESTS = 10;
 export const CHAPTER_PAGE_SIZE = 1000;
-export const RECENTLY_ADDED_SIZE = 50;
 export const RANDOM_AMOUNT = 12;
 
-export const TITLE_BROWSE_PAGER_QUERY = `
-query get_title_browse_pager($select: Title_Browse_Select) {
-  get_title_browse_pager(select: $select) {
-    next
-  }
-}
-`;
-
+// The list queries ask only for what a card shows. Other names and the
+// synopsis come from COMIC_QUERY when a title is opened.
 export const TITLE_BROWSE_ITEMS_QUERY = `
 query get_title_browse_items($select: Title_Browse_Select) {
   get_title_browse_items(select: $select) {
     data {
       id
       name: title
-      altNames: alt_titles
-      nativeTitle: native_title
-      romanizedTitle: romanized_title
       originalLanguage: original_language
       contentRating: content_rating_id
       type: type_id
       genres: genre_ids
       tags: format_ids
-      description
       urlCover: cover_local_url
       remoteCoverUrl: cover_url
       urlPath
@@ -69,15 +60,11 @@ query get_title_randomList($select: Title_RandomList_Select) {
     data {
       id
       name: title
-      altNames: alt_titles
-      nativeTitle: native_title
-      romanizedTitle: romanized_title
       originalLanguage: original_language
       contentRating: content_rating_id
       type: type_id
       genres: genre_ids
       tags: format_ids
-      description
       urlCover: cover_local_url
       remoteCoverUrl: cover_url
       urlPath
@@ -129,7 +116,6 @@ query get_title_recentlyAdded($select: Title_RecentlyAdded_Select) {
       data {
         id
         name: title
-        altNames: alt_titles
         originalLanguage: original_language
         contentRating: content_rating_id
         type: type_id
@@ -159,16 +145,12 @@ query get_title_titleNode($id: ID!) {
     data {
       id
       name: title
-      altNames: alt_titles
-      nativeTitle: native_title
-      romanizedTitle: romanized_title
       originalLanguage: original_language
       contentRating: content_rating_id
       type: type_id
       genres: genre_ids
       tags: format_ids
       demographics: demographic_ids
-      description
       urlCover: cover_local_url
       remoteCoverUrl: cover_url
       urlPath
