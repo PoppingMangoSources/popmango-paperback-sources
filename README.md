@@ -125,16 +125,22 @@ Include the affected source, the page or title that failed, and screenshots or r
 
 ## Development
 
+Start with [AGENTS.md](AGENTS.md) and [DEVELOPMENT.md](DEVELOPMENT.md). The
+[Paperback 0.8 skill](.agents/skills/paperback-extension/SKILL.md) covers source
+work; [conversion](docs/CONVERSION.md) and [device testing](docs/TESTING.md)
+describe the platform differences and checks that need the app.
+
 <details>
 <summary><b>Build and conversion notes</b></summary>
 
 ~~~bash
-npm install
-npm run typecheck
+npm ci
+npm run verify
+npm run hooks                         # optional local pre-push gate
 npm run bundle -- --folder=all
 npm run readme -- --folder=all
 npm run site -- --folder=all
-npm test
+npm run test:live -- RinkoComics       # live network checks, after a build
 ~~~
 
 Pushing <code>main</code> publishes the combined directory at <code>/all</code>. The previous <code>/0.8</code> path remains available so existing Paperback 0.8 installs keep receiving updates.
