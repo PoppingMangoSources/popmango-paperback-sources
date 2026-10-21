@@ -51,6 +51,23 @@ function bufferReferences(file, source) {
   const checker = ts.createProgram([file], options, host).getTypeChecker();
   let count = 0;
 
+  // Follow immutable aliases by symbol so nested scopes and ordinary objects
+  // cannot be confused with the real global object. Cycles are not aliases.
+  const isGlobalObject = (node, seen = new Set()) => {
+    while (ts.isParenthesizedExpression(node)) node = node.expression;
+    if (!ts.isIdentifier(node)) return false;
+    const symbol = checker.getSymbolAtLocation(node);
+    if (node.text === 'globalThis' && !symbol?.declarations?.length) return true;
+    if (!symbol || seen.has(symbol)) return false;
+    seen.add(symbol);
+    const declaration = symbol.valueDeclaration;
+    return !!(declaration && ts.isVariableDeclaration(declaration) &&
+      ts.isIdentifier(declaration.name) && declaration.initializer &&
+      ts.isVariableDeclarationList(declaration.parent) &&
+      (declaration.parent.flags & ts.NodeFlags.Const) &&
+      isGlobalObject(declaration.initializer, seen));
+  };
+
   const visit = node => {
     if (ts.isIdentifier(node) && node.text === 'Buffer') {
       const parent = node.parent;
@@ -58,6 +75,7 @@ function bufferReferences(file, source) {
         if (!checker.getShorthandAssignmentValueSymbol(parent)) count++;
       } else if (
         !(ts.isPropertyAccessExpression(parent) && parent.name === node) &&
+        !(ts.isBindingElement(parent) && parent.propertyName === node) &&
         !ts.isLabeledStatement(parent) && !ts.isBreakStatement(parent) &&
         !ts.isContinueStatement(parent) && !checker.getSymbolAtLocation(node)
       ) {
@@ -69,9 +87,7 @@ function bufferReferences(file, source) {
       (ts.isElementAccessExpression(node) && ts.isStringLiteralLike(node.argumentExpression) &&
         node.argumentExpression.text === 'Buffer')
     ) {
-      const object = node.expression;
-      if (ts.isIdentifier(object) && object.text === 'globalThis' &&
-          !checker.getSymbolAtLocation(object)?.declarations?.length) count++;
+      if (isGlobalObject(node.expression)) count++;
     }
     ts.forEachChild(node, visit);
   };

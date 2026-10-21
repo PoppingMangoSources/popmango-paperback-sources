@@ -26,6 +26,10 @@ try {
     'exports.value = `${Buffer}`',
     'const codec = {Buffer: 0}; const Bytes = Buffer;',
     'function other(Buffer) {} Buffer.from(data)',
+    'const root = globalThis; root.Buffer.from(data)',
+    "const root = globalThis; const other = (root); other['Buffer'].from(data)",
+    'const root = globalThis; function read() { return root.Buffer; }',
+    'const {Buffer: Bytes} = Buffer;',
   ];
   const accepted = [
     'exports.value = new Uint8Array(8)',
@@ -40,6 +44,12 @@ try {
     'function read(Buffer) { return Buffer.from(data); }',
     'const Buffer = codec; exports.value = {Buffer};',
     'function read({Buffer}) { return Buffer.from(data); }',
+    'function read(codec) { const {Buffer: Bytes} = codec; return Bytes; }',
+    'function read({Buffer: Bytes}) { return Bytes; }',
+    'const root = codec; root.Buffer.from(data)',
+    'function read(globalThis) { const root = globalThis; return root.Buffer; }',
+    'const root = globalThis; function read(root) { return root.Buffer; }',
+    'const first = second; const second = first; first.Buffer.from(data)',
     'function read(globalThis) { return globalThis.Buffer.from(data); }',
     'Buffer: for (;;) { break Buffer; }',
   ];
