@@ -75,7 +75,6 @@ import {
     requestChapter,
     requestReaderKey,
     type CatalogueParams,
-    type SiteCookie,
 } from "./network";
 import {
     fromTagId,
@@ -96,7 +95,7 @@ import {
 export const ToonkotsuInfo = sourceInfo({
     name: "Toonkotsu",
     description: "Extension that pulls content from toonkotsu.com.",
-    version: "1.1.2",
+    version: "1.1.3",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DOMAIN,
@@ -126,7 +125,7 @@ export class Toonkotsu extends PopmangoSource {
             domain: DOMAIN,
             settingsKeys: SETTINGS_KEYS,
             rateLimit: { numberOfRequests: 5, bufferInterval: 1, ignoreImages: true },
-            interceptor: new ToonkotsuInterceptor((cookies) => this.keepCookies(cookies)),
+            interceptor: new ToonkotsuInterceptor(),
         });
     }
 
@@ -166,8 +165,14 @@ export class Toonkotsu extends PopmangoSource {
         return this.settings.boolean(STATE_KEYS.DEDUPLICATE_CHAPTERS, false);
     }
 
+    /**
+     * Off by default, unlike 0.9.
+     *
+     * 0.9 shows the size beside the group as part of telling uploads apart; a
+     * 0.8 chapter row has only its title for it, where a size reads as noise.
+     */
     private get showUploadSize(): boolean {
-        return this.settings.boolean(STATE_KEYS.SHOW_UPLOAD_SIZE, true);
+        return this.settings.boolean(STATE_KEYS.SHOW_UPLOAD_SIZE, false);
     }
 
     override async getSettingsSections(): Promise<MenuSection[]> {
@@ -528,7 +533,11 @@ export class Toonkotsu extends PopmangoSource {
             return { id: chapter.chapterId, mangaId: chapter.sourceManga.mangaId, pages };
         }
         // The site's human check needs the reader to see it, so the chapter is
-        // opened in the site's own reader to pass it there.
+        // opened in the site's own reader to pass it there. The session it is
+        // passed in is the one the next read should use, so nothing from this
+        // attempt is kept.
+        this.siteSessionPromise = undefined;
+        this.readerKeyPromise = undefined;
         throw new CloudflareError(
             Application.createRequest({
                 url: `${DOMAIN}/chapter/${chapter.chapterId}`,
@@ -551,19 +560,10 @@ export class Toonkotsu extends PopmangoSource {
 
     /** The site issues its guest cookie here, and the reader refuses a visitor without one. */
     private getSiteSession(fresh = false): Promise<unknown> {
-        return (this.siteSessionPromise ??= fetchSiteSession(fresh).then(
-            (cookies) => this.keepCookies(cookies),
-            (error: unknown) => {
-                this.siteSessionPromise = undefined;
-                throw error;
-            },
-        ));
-    }
-
-    private keepCookies(cookies: SiteCookie[]): void {
-        for (const cookie of cookies) {
-            this.cookieStorage.setCookie(cookie);
-        }
+        return (this.siteSessionPromise ??= fetchSiteSession(fresh).catch((error: unknown) => {
+            this.siteSessionPromise = undefined;
+            throw error;
+        }));
     }
 
     /** Resolves undefined when the site asks for its human check before handing out a key. */
@@ -653,7 +653,14 @@ export class Toonkotsu extends PopmangoSource {
             if (needsHumanCheck(limit)) {
                 return undefined;
             }
-            throw readerError(status, limit, `chapter ${chapterId}`, signingRejected && response.build !== READER_BUILD);
+            const readerChanged = signingRejected && response.build !== READER_BUILD;
+            // A guest session the site still refuses, with the reader unchanged,
+            // is one only the site's own pages can set up: 0.8 has no way to
+            // hand a source the web view's cookies, so the reader is sent there.
+            if (sessionRejected && !readerChanged) {
+                return undefined;
+            }
+            throw readerError(status, limit, `chapter ${chapterId}`, readerChanged);
         }
     }
 }

@@ -72,62 +72,21 @@ function imageType(bytes: Uint8Array): string | undefined {
     return ascii(0, 3) === "GIF" ? "image/gif" : undefined;
 }
 
-export interface SiteCookie {
-    name: string;
-    value: string;
-    expires?: Date;
-}
-
-/**
- * The cookies a response sets.
- *
- * The reader refuses a visitor without the site's guest cookie, and the shared
- * cookie jar only keeps what a source hands it, so they are read off the
- * response here. Several cookies can arrive joined by commas; a comma inside an
- * Expires date is followed by a space and a digit, which a cookie name is not.
- */
-export function cookiesSetBy(headers: Record<string, unknown>): SiteCookie[] {
-    const header = headerValue(headers, "set-cookie");
-    if (header === undefined) {
-        return [];
-    }
-
-    return header.split(/,(?=\s*[^;,=\s]+=)/).flatMap((cookie) => {
-        const [pair = "", ...attributes] = cookie.split(";");
-        const index = pair.indexOf("=");
-        if (index <= 0) {
-            return [];
-        }
-
-        let expires: Date | undefined;
-        for (const attribute of attributes) {
-            const [name = "", ...rest] = attribute.split("=");
-            const key = name.trim().toLowerCase();
-            const value = rest.join("=").trim();
-            if (key === "max-age" && Number.isFinite(Number(value))) {
-                expires = new Date(Date.now() + Number(value) * 1000);
-            } else if (key === "expires" && expires === undefined && !Number.isNaN(Date.parse(value))) {
-                expires = new Date(Date.parse(value));
-            }
-        }
-        return [{ name: pair.slice(0, index).trim(), value: pair.slice(index + 1).trim(), expires }];
-    });
-}
-
 const IMAGE_REGEX = /\.(?:avif|gif|jpe?g|png|webp)(?:[?#]|$)/i;
 const isApi = (url: string): boolean => /\/(?:api|cdn\/v1)\//.test(url);
 
 export class ToonkotsuInterceptor extends PaperbackInterceptor {
-    constructor(private readonly keepCookies: (cookies: SiteCookie[]) => void) {
-        super();
-    }
-
     override async interceptRequest(request: InterceptedRequest): Promise<InterceptedRequest> {
         const api = isApi(request.url);
         const image = IMAGE_REGEX.test(request.url) || pageKeyFor(request.url) !== undefined;
 
         return {
             ...request,
+            // The site's session lives in the app's own cookie jar, the one the
+            // cloud button's web view writes to. The reader's human check is
+            // passed in that session, so a cookie sent alongside it would only
+            // shadow the session that was verified; none are sent from here.
+            cookies: {},
             headers: {
                 ...request.headers,
                 accept: api
@@ -157,13 +116,6 @@ export class ToonkotsuInterceptor extends PaperbackInterceptor {
                     headers: { "user-agent": await Application.getDefaultUserAgent() },
                 }),
             );
-        }
-
-        if (request.url.startsWith(DOMAIN)) {
-            const cookies = cookiesSetBy(response.headers);
-            if (cookies.length > 0) {
-                this.keepCookies(cookies);
-            }
         }
 
         const page = pageKeyFor(request.url);
@@ -204,10 +156,7 @@ interface JsonInit {
     headers?: Record<string, string>;
 }
 
-const requestJson = async (
-    url: string,
-    init?: JsonInit,
-): Promise<{ status: number; data: unknown; headers: Record<string, unknown> }> => {
+const requestJson = async (url: string, init?: JsonInit): Promise<{ status: number; data: unknown }> => {
     const [response, body] = await Application.scheduleRequest({
         url,
         method: init?.body === undefined ? "GET" : "POST",
@@ -219,7 +168,7 @@ const requestJson = async (
     });
 
     try {
-        return { status: response.status, data: JSON.parse(body.text) as unknown, headers: response.headers ?? {} };
+        return { status: response.status, data: JSON.parse(body.text) as unknown };
     } catch {
         if (response.status < 200 || response.status >= 300) {
             throw new Error(`Request failed with status ${response.status}: ${url}`);
@@ -282,21 +231,9 @@ export const fetchFacets = (): Promise<FacetsResponse> => fetchJson(siteUrl("cdn
 
 export const fetchSeries = (mangaId: string): Promise<SeriesResponse> => fetchJson(siteUrl(`cdn/v1/series/${mangaId}`, {}));
 
-/**
- * Asks the site for its guest session, and returns the cookies that come with it.
- *
- * The interceptor keeps cookies as responses arrive, but the runtime reuses a
- * read made in the last few seconds without running the interceptor again, so
- * a reused answer would leave the guest cookie behind; it is read off the
- * response itself here.
- */
-export const fetchSiteSession = async (fresh = false): Promise<SiteCookie[]> => {
-    const { status, headers } = await requestJson(`${DOMAIN}/api/auth/me`, fresh ? FRESH : undefined);
-    if (status < 200 || status >= 300) {
-        throw new Error(`Request failed with status ${status}: ${DOMAIN}/api/auth/me`);
-    }
-    return cookiesSetBy(headers);
-};
+// The site issues its guest cookie here, into the app's cookie jar.
+export const fetchSiteSession = (fresh = false): Promise<unknown> =>
+    fetchJson(`${DOMAIN}/api/auth/me`, fresh ? FRESH : undefined);
 
 // The reader answers its reading limit with a 429 whose body says how to
 // recover, so these return the status alongside the body.
