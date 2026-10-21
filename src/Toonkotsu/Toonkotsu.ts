@@ -97,7 +97,7 @@ import {
 export const ToonkotsuInfo = sourceInfo({
     name: "Toonkotsu",
     description: "Extension that pulls content from toonkotsu.com.",
-    version: "1.1.5",
+    version: "1.0.0",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DOMAIN,
@@ -236,7 +236,8 @@ export class Toonkotsu extends PopmangoSource {
                     "widest, Smallest Download its lightest, which is less to download and decrypt; with Deduplicate " +
                     "Chapters on, Smallest Download keeps the lightest upload of each chapter from any group. Upload " +
                     "Size adds each upload's size to its title and lists a group's uploads of different sizes " +
-                    "separately.",
+                    "separately. Changing these lists other uploads of the same chapters, so chapters read under " +
+                    "one choice can show as unread under another.",
                 rows: [
                     switchRow("deduplicate_chapters", {
                         label: "Deduplicate Chapters",

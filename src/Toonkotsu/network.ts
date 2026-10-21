@@ -54,6 +54,24 @@ function pageKeyFor(url: string): { src: string; key: string; nonce: string } | 
     return { src, key, nonce };
 }
 
+/** What a decrypted page actually is, from its leading bytes. */
+function imageType(bytes: Uint8Array): string | undefined {
+    const ascii = (from: number, to: number) => String.fromCharCode(...bytes.subarray(from, to));
+    if (bytes[0] === 0xff && bytes[1] === 0xd8) {
+        return "image/jpeg";
+    }
+    if (ascii(1, 4) === "PNG") {
+        return "image/png";
+    }
+    if (ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP") {
+        return "image/webp";
+    }
+    if (ascii(4, 12).includes("ftypavi")) {
+        return "image/avif";
+    }
+    return ascii(0, 3) === "GIF" ? "image/gif" : undefined;
+}
+
 const IMAGE_REGEX = /\.(?:avif|gif|jpe?g|png|webp)(?:[?#]|$)/i;
 const isApi = (url: string): boolean => /\/(?:api|cdn\/v1)\//.test(url);
 
@@ -125,12 +143,12 @@ export class ToonkotsuInterceptor extends PaperbackInterceptor {
             );
         }
 
-        // Only the bytes are handed back. The app reads an image's format from
-        // the bytes themselves, and declaring a type means writing to fields
-        // the app's response does not have: that write fails, the shared chain
-        // falls back to returning a copy, and the app rejects the copy as an
-        // invalid return type (error 303) once per page.
-        return { text: body.text, raw: App.createRawData({ byteArray: image }) };
+        // The server labels the ciphertext, so the type is the image's own.
+        return {
+            text: body.text,
+            raw: App.createRawData({ byteArray: image }),
+            contentType: imageType(image) ?? body.contentType,
+        };
     }
 }
 
