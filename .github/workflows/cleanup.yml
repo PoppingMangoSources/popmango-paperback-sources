@@ -17,10 +17,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Check out the default branch tooling
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
       - name: Resolve the published folder
         id: folder
+        env:
+          DELETED_BRANCH: ${{ github.event.ref }}
         run: |
-          folder="$(printf '%s' "${{ github.event.ref }}" | tr '/' '-')"
+          folder="$(node scripts/publish-folder.mjs "$DELETED_BRANCH")"
           echo "name=$folder" >> "$GITHUB_OUTPUT"
           echo "Removing /$folder"
 
@@ -31,15 +39,17 @@ jobs:
           path: bundles
 
       - name: Drop the folder and republish
+        env:
+          PUBLISH_FOLDER: ${{ steps.folder.outputs.name }}
         run: |
           cd bundles
-          if [ ! -d "${{ steps.folder.outputs.name }}" ]; then
+          if [ ! -d "$PUBLISH_FOLDER" ]; then
             echo "Nothing published for this branch."
             exit 0
           fi
-          rm -rf "${{ steps.folder.outputs.name }}"
+          rm -rf "$PUBLISH_FOLDER"
           git config user.name "PoppingMangoSources"
           git config user.email "ikjot97@hotmail.com"
           git add -A
-          git commit -q -m "Remove bundles for ${{ steps.folder.outputs.name }}"
+          git commit -q -m "Remove bundles for $PUBLISH_FOLDER"
           git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" gh-pages

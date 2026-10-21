@@ -1,0 +1,21 @@
+name: Set up Paperback 0.8
+description: Install the locked official 0.8.7 toolchain on the repository's Node version.
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: npm
+    - name: Install locked dependencies
+      shell: bash
+      run: npm ci
+    - name: Confirm official Paperback package versions
+      shell: bash
+      run: |
+        node <<'JS'
+        const assert = require('node:assert/strict');
+        for (const name of ['toolchain', 'types']) {
+          assert.equal(require(`@paperback/${name}/package.json`).version, '0.8.7');
+        }
+        JS

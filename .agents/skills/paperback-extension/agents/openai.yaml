@@ -1,0 +1,4 @@
+interface:
+  display_name: "Paperback 0.8 Extensions"
+  short_description: "Build and review Paperback 0.8.7 source ports"
+  default_prompt: "Use $paperback-extension to fix or port a source for Paperback 0.8.7 in this repository."
