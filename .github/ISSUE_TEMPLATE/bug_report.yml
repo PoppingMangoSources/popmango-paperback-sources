@@ -59,3 +59,26 @@ body:
       placeholder: 0.8.x
     validations:
       required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: Device and iOS/iPadOS version
+      placeholder: iPhone, iOS 18.7
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Include the source settings and a public title/chapter URL. Say whether page images actually render.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant error or log
+      description: Remove authorization headers, cookies, tokens and private account information before posting.
+      render: text

@@ -1,0 +1,42 @@
+name: Live source check
+
+on:
+  workflow_dispatch:
+    inputs:
+      source:
+        description: Source directory name to test (public site requests only)
+        required: true
+        default: RinkoComics
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  live:
+    name: Official 0.8 source tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-paperback
+      - name: Verify and bundle
+        run: npm run verify
+      - name: Run the selected source
+        env:
+          SOURCE_NAME: ${{ inputs.source }}
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p logs
+          npm run test:live -- "$SOURCE_NAME" 2>&1 | tee logs/live-source.log
+      - name: Upload live logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: paperback-08-live-logs
+          path: logs/
+          if-no-files-found: ignore
+          retention-days: 7

@@ -1,5 +1,39 @@
 # Testing on a device
 
+Read [AGENTS.md](../AGENTS.md) for the contribution rules and
+[DEVELOPMENT.md](../DEVELOPMENT.md) for local setup. Run `npm run verify` first:
+it is offline and is also run by CI and the optional pre-push hook. It cannot
+prove the behavior of a website or the native app.
+
+## Run focused live checks
+
+After building, `npm run test:live -- RinkoComics` runs the official 0.8.7
+source test cases against the bundled class using the official Node polyfills.
+It needs network access and returns a failing exit code if tests fail. The
+manual **Live source check** workflow does the same and uploads its log.
+
+The normal `npm test` remains the official `paperback test` command. Its local
+transpilation path expects emitting TypeScript output, whereas this repo uses
+`noEmit`; use `test:live` for local Node tests. For an app build supporting the
+devtools service, the official device path is:
+
+```sh
+npm test -- RinkoComics --ip=<your-phone's-address>
+```
+
+Run `npm run bundle` before the device command. Device support and local-network
+permissions vary; no connection is an unavailable check, not a passing test.
+The devtools protobuf/Swift files do not extend what a source can return.
+
+The live runner can read the official optional test data from
+`src/<Source>/<Source>.test.json` (`mangaId`, `chapterId`, and `searchData` with
+`query`, `includedTags`, `excludedTags`). Without it, tests infer a title from
+the home page. Keep inputs public and verify the selected chapter is readable.
+
+Node polyfills provide APIs and permissive object factories the phone may not
+have. In particular, passing a Node test does not prove settings retention,
+chapter grouping, native image rendering, or a successful Cloudflare challenge.
+
 The typechecker and `npm run check` catch a lot, but some failures only show up
 inside the app: a global the runtime does not have, a selector the app's own
 cheerio rejects, an image the reader cannot draw. This is how to see a change
@@ -54,3 +88,8 @@ shows on screen are the fallback.
 - **Settings open and keep their values** after leaving and coming back.
 - **The version number went up.** The app caches a source by version, so a fix
   shipped under an old number never reaches anyone who already has it.
+- **Cold-start chapter access**, volume restarts, decimal numbers, alternate
+  upload groups, search exclusions, and the affected setting's persisted value.
+
+Report offline, live, and device results separately with the source version,
+Paperback app build, device OS and public title/chapter used. State any gaps.
