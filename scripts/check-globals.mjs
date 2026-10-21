@@ -18,6 +18,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import ts from 'typescript';
 
 const FORBIDDEN = [
   ['setTimeout', /\bsetTimeout\s*\(/g],
@@ -28,7 +29,6 @@ const FORBIDDEN = [
   ['queueMicrotask', /\bqueueMicrotask\s*\(/g],
   ['atob', /\batob\s*\(/g],
   ['btoa', /\bbtoa\s*\(/g],
-  ['Buffer', /\bBuffer\s*(?:\.|\[|\()/g],
   ['TextDecoder', /\bnew\s+TextDecoder\b/g],
   ['TextEncoder', /\bnew\s+TextEncoder\b/g],
   ['XMLHttpRequest', /\bnew\s+XMLHttpRequest\b/g],
@@ -41,6 +41,43 @@ const FORBIDDEN = [
   ['window', /\bwindow\s*\./g],
   ['process', /\bprocess\s*\.\s*(?:env|exit|argv|cwd)\b/g],
 ];
+
+function bufferReferences(file, source) {
+  // Resolve only the bundle's own bindings; Node's ambient types would hide the missing global.
+  const options = { allowJs: true, noLib: true, noResolve: true, types: [] };
+  const tree = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+  const host = ts.createCompilerHost(options);
+  host.getSourceFile = name => name === file ? tree : undefined;
+  const checker = ts.createProgram([file], options, host).getTypeChecker();
+  let count = 0;
+
+  const visit = node => {
+    if (ts.isIdentifier(node) && node.text === 'Buffer') {
+      const parent = node.parent;
+      if (ts.isShorthandPropertyAssignment(parent)) {
+        if (!checker.getShorthandAssignmentValueSymbol(parent)) count++;
+      } else if (
+        !(ts.isPropertyAccessExpression(parent) && parent.name === node) &&
+        !ts.isLabeledStatement(parent) && !ts.isBreakStatement(parent) &&
+        !ts.isContinueStatement(parent) && !checker.getSymbolAtLocation(node)
+      ) {
+        count++;
+      }
+    }
+    if (
+      (ts.isPropertyAccessExpression(node) && node.name.text === 'Buffer') ||
+      (ts.isElementAccessExpression(node) && ts.isStringLiteralLike(node.argumentExpression) &&
+        node.argumentExpression.text === 'Buffer')
+    ) {
+      const object = node.expression;
+      if (ts.isIdentifier(object) && object.text === 'globalThis' &&
+          !checker.getSymbolAtLocation(object)?.declarations?.length) count++;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(tree);
+  return count;
+}
 
 // The bundles are what ships, so they are rebuilt rather than trusted to be
 // current.
@@ -65,6 +102,9 @@ for (const name of readdirSync(directory)) {
 
   scanned += 1;
   const source = readFileSync(file, 'utf8');
+
+  const buffers = bufferReferences(file, source);
+  if (buffers) offences.push({ name, global: 'Buffer', count: buffers });
 
   for (const [global, pattern] of FORBIDDEN) {
     const found = source.match(pattern);
