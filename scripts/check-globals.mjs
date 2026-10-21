@@ -28,6 +28,7 @@ const FORBIDDEN = [
   ['queueMicrotask', /\bqueueMicrotask\s*\(/g],
   ['atob', /\batob\s*\(/g],
   ['btoa', /\bbtoa\s*\(/g],
+  ['Buffer', /\bBuffer\s*(?:\.|\[|\()/g],
   ['TextDecoder', /\bnew\s+TextDecoder\b/g],
   ['TextEncoder', /\bnew\s+TextEncoder\b/g],
   ['XMLHttpRequest', /\bnew\s+XMLHttpRequest\b/g],
