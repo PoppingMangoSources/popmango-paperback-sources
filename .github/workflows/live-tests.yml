@@ -1,22 +1,48 @@
-name: Live source check
+name: Live source checks
 
 on:
+  schedule:
+    - cron: '17 8 * * 1'
   workflow_dispatch:
     inputs:
       source:
-        description: Source directory name to test (public site requests only)
+        description: 'all runs enabled sources; a source name also overrides its exclusion'
         required: true
-        default: RinkoComics
+        default: all
         type: string
 
 permissions:
   contents: read
 
 jobs:
+  select:
+    name: Select live sources
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.sources.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Select sources and report exclusions
+        id: sources
+        env:
+          SOURCE_SELECTION: ${{ inputs.source || 'all' }}
+        run: node scripts/live-test-matrix.mjs "$SOURCE_SELECTION"
+
   live:
-    name: Official 0.8 source tests
+    name: Live (${{ matrix.source }})
+    needs: select
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix: ${{ fromJSON(needs.select.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -26,7 +52,7 @@ jobs:
         run: npm run verify
       - name: Run the selected source
         env:
-          SOURCE_NAME: ${{ inputs.source }}
+          SOURCE_NAME: ${{ matrix.source }}
         shell: bash
         run: |
           set -o pipefail
@@ -36,7 +62,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: paperback-08-live-logs
+          name: paperback-08-live-${{ matrix.source }}
           path: logs/
           if-no-files-found: ignore
           retention-days: 7

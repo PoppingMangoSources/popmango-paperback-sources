@@ -100,12 +100,18 @@ npm run verify                 # offline gate: types, regressions, bundles, page
 npm run hooks                  # opt in to the same gate before local git pushes
 npm run serve -- -w             # official 0.8 development server
 npm run test:live -- RinkoComics # official 0.8 tests against a built source; needs network
+npm run test:live:matrix        # list the scheduled sources and exclusion reasons
 npm test -- RinkoComics --ip=<phone-ip> # official device runner, when supported by app
 ```
 
 `npm run verify -- --folder=branch-name` validates the same publication layout
 used by CI. `npm run verify -- --skip-bundle --folder=branch-name` checks an
 already-built folder; do not use it to validate stale output.
+
+Checks also runs actionlint 1.7.12 over every workflow. If installed locally,
+run `actionlint` from the repository root before pushing workflow changes.
+Weekly live checks use `.github/live-test-exclusions.json`; every exclusion
+needs a dated reason. A manual source selection overrides its exclusion.
 
 Run the offline gate before finishing. Use `git diff --check` and inspect the
 whole diff for unrelated changes. The optional pre-push hook is local tooling;

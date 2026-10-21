@@ -47,6 +47,7 @@ for (const source of manifest.sources) {
   }
   for (const [bit, methods] of [
     [1, ['getChapters', 'getChapterDetails']],
+    [2, ['getMangaProgressManagementForm', 'getMangaProgress', 'processChapterReadActionQueue']],
     [4, ['getHomePageSections', 'getViewMoreItems']],
     [16, ['getCloudflareBypassRequestAsync']],
     [32, ['getSourceMenu']],

@@ -29,10 +29,7 @@ jobs:
         id: folder
         run: |
           branch="${GITHUB_REF#refs/heads/}"
-          case "$branch" in
-            main) folder="all" ;;
-            *) folder="$(printf '%s' "$branch" | tr '/' '-')" ;;
-          esac
+          folder="$(node scripts/publish-folder.mjs "$branch")"
           echo "name=$folder" >> "$GITHUB_OUTPUT"
           echo "Publishing to /$folder"
 
@@ -51,10 +48,14 @@ jobs:
         run: npm run verify -- --folder="$PUBLISH_FOLDER"
 
       - name: Build the repository site
-        run: npm run site -- --folder=${{ steps.folder.outputs.name }}
+        env:
+          PUBLISH_FOLDER: ${{ steps.folder.outputs.name }}
+        run: npm run site -- --folder="$PUBLISH_FOLDER"
 
       - name: Apply site presentation
-        run: node scripts/customize-site.mjs --folder=${{ steps.folder.outputs.name }}
+        env:
+          PUBLISH_FOLDER: ${{ steps.folder.outputs.name }}
+        run: node scripts/customize-site.mjs --folder="$PUBLISH_FOLDER"
 
       - name: Preserve the 0.8 compatibility path
         run: |
@@ -64,6 +65,8 @@ jobs:
           fi
 
       - name: Publish to GitHub Pages
+        env:
+          PUBLISH_FOLDER: ${{ steps.folder.outputs.name }}
         run: |
           cd bundles
           rm -rf .git
@@ -71,5 +74,5 @@ jobs:
           git config user.name "PoppingMangoSources"
           git config user.email "ikjot97@hotmail.com"
           git add -A
-          git commit -q -m "Publish bundles for ${{ steps.folder.outputs.name }}"
+          git commit -q -m "Publish bundles for $PUBLISH_FOLDER"
           git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" gh-pages

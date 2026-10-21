@@ -15,7 +15,11 @@
   sections. Do not hand-edit source counts or mix unrelated 0.9 catalog changes.
 - Keep `/all`, `/0.8`, `versioning.json`, `source.js`, native metadata and
   `paperback://` links compatible. Test branch previews use the existing
-  slash-to-hyphen folder mapping; avoid reserved names `all`, `0.8`, `gh-pages`.
+  folder mapping in `scripts/publish-folder.mjs`: `main` maps to `all`, other
+  non-ASCII-alphanumeric/dot/underscore/hyphen characters become hyphens, and
+  non-alphanumeric starts get a `branch-` prefix. Publication and deletion
+  share the mapping; avoid reserved names `all`, `0.8`, `gh-pages` and branch
+  names that normalize to the same folder.
 - Write a concrete commit/PR summary and validation notes. Never add an
   `Assisted-by` trailer. Do not change permissions or branch protections.
 

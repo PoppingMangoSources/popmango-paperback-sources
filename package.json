@@ -18,6 +18,7 @@
     "verify": "node scripts/verify.mjs",
     "hooks": "git config --local core.hooksPath .githooks",
     "test:live": "node scripts/test-source.mjs",
+    "test:live:matrix": "node scripts/live-test-matrix.mjs",
     "check:bundles": "node scripts/check-bundles.mjs",
     "check:site": "node scripts/check-site.mjs",
     "site": "node scripts/build-site.mjs",

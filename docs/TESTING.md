@@ -10,7 +10,24 @@ prove the behavior of a website or the native app.
 After building, `npm run test:live -- RinkoComics` runs the official 0.8.7
 source test cases against the bundled class using the official Node polyfills.
 It needs network access and returns a failing exit code if tests fail. The
-manual **Live source check** workflow does the same and uploads its log.
+**Live source checks** workflow does the same and uploads a separate log per
+source. It runs weekly on Monday at 08:17 UTC, and manually on demand. The
+schedule starts after the workflow reaches the default branch.
+
+The default `all` selection discovers source entry points in `src/` and skips
+only names in [the exclusion list](../.github/live-test-exclusions.json).
+Each entry records a dated reason and should be removed after a successful
+manual recheck. `npm run test:live:matrix` lists selected sources and reasons;
+the workflow also records exclusions in its summary. Choosing a specific
+source in the manual workflow overrides its exclusion, so blocked sites can
+be retested without editing the list. Invalid names, stale exclusion names,
+missing reasons and an empty enabled catalog fail selection.
+
+Runs use at most two concurrent source jobs, keep other jobs running when one
+fails, and never publish. An unexpected failure remains a failed job; tests
+do not automatically classify failures as network problems or add exclusions.
+Confirm an HTTP/network/challenge failure before excluding a source; an empty
+parser result by itself is not proof of a network block.
 
 The normal `npm test` remains the official `paperback test` command. Its local
 transpilation path expects emitting TypeScript output, whereas this repo uses

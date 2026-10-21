@@ -18,7 +18,9 @@ modify `node_modules`, simulate WebViews, or implement another app's runtime.
 
 Do not run the entire catalog repeatedly against live sites. Use the changed
 source, respect its rate limit, and keep network checks separate from offline
-CI. The manual workflow uploads logs without publishing. Do not classify a
+CI. The weekly/manual workflow uploads per-source logs without publishing;
+the weekly run skips only documented entries in `.github/live-test-exclusions.json`.
+A manual source selection overrides its exclusion for rechecking. Do not classify a
 network block as a pass or automatically rewrite working code based on it.
 
 Verify these on Paperback 0.8 because Node tests cannot prove them:
