@@ -96,7 +96,7 @@ import {
 export const ToonkotsuInfo = sourceInfo({
     name: "Toonkotsu",
     description: "Extension that pulls content from toonkotsu.com.",
-    version: "1.0.0",
+    version: "1.1.2",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DOMAIN,
