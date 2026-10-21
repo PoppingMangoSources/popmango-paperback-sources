@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-const lines = readFileSync('/home/user/popmango-paperback-sources/common/Runtime.ts','utf8').split('\n');
+const lines = readFileSync(new URL('../common/Runtime.ts', import.meta.url),'utf8').split('\n');
 
 // Slice each pure function out by its own line range, then drop the types.
 function grab(startsWith) {

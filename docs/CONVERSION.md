@@ -1,5 +1,10 @@
 # Porting a source from 0.9 to 0.8
 
+Follow [AGENTS.md](../AGENTS.md) for repository rules and the
+[Paperback 0.8 skill](../.agents/skills/paperback-extension/SKILL.md) for the
+working sequence. This document describes the conversion; it does not replace
+the official pinned 0.8.7 types or the shared adapter's implementations.
+
 The two extension APIs differ enough that a 0.9 bundle will not load on 0.8 at
 all. Most of the difference is absorbed by `common/`, so a port is mostly
 mechanical. This is the map.
@@ -185,3 +190,5 @@ method runs, and read back synchronously after that.
 - [ ] The class name, the file name and the folder name all match
 - [ ] `npm run typecheck` is clean
 - [ ] `npm run bundle` lists the source in `bundles/versioning.json`
+- [ ] `npm run verify` passes, including bundle and repository-link checks
+- [ ] The changed screens and reader were tested on Paperback 0.8, or reported unverified

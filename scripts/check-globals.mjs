@@ -17,6 +17,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import path from 'node:path';
 
 const FORBIDDEN = [
   ['setTimeout', /\bsetTimeout\s*\(/g],
@@ -42,9 +43,14 @@ const FORBIDDEN = [
 
 // The bundles are what ships, so they are rebuilt rather than trusted to be
 // current.
-execFileSync('npx', ['paperback', 'bundle'], { stdio: 'pipe' });
+const folder = process.argv.find(arg => arg.startsWith('--folder='))?.slice(9) ?? '';
+const directory = path.join('bundles', folder);
+if (!process.argv.includes('--skip-bundle')) {
+  execFileSync(process.execPath, ['node_modules/@paperback/toolchain/bin/run', 'bundle',
+    ...(folder ? [`--folder=${folder}`] : [])], { stdio: 'pipe' });
+}
 
-if (!existsSync('bundles')) {
+if (!existsSync(directory)) {
   console.log('FAIL  no bundles directory to scan');
   process.exit(1);
 }
@@ -52,8 +58,8 @@ if (!existsSync('bundles')) {
 const offences = [];
 let scanned = 0;
 
-for (const name of readdirSync('bundles')) {
-  const file = `bundles/${name}/source.js`;
+for (const name of readdirSync(directory)) {
+  const file = path.join(directory, name, 'source.js');
   if (!existsSync(file)) continue;
 
   scanned += 1;
@@ -66,6 +72,11 @@ for (const name of readdirSync('bundles')) {
 }
 
 console.log(`Scanned ${scanned} bundles for globals Paperback 0.8 does not provide.`);
+
+if (scanned === 0) {
+  console.log('FAIL  no source bundles were scanned');
+  process.exit(1);
+}
 
 if (offences.length > 0) {
   for (const { name, global, count } of offences) {

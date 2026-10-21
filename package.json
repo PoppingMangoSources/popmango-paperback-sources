@@ -15,6 +15,12 @@
     "serve": "paperback serve",
     "test": "paperback test",
     "typecheck": "tsc --noEmit",
+    "verify": "node scripts/verify.mjs",
+    "hooks": "git config --local core.hooksPath .githooks",
+    "test:live": "node scripts/test-source.mjs",
+    "test:live:matrix": "node scripts/live-test-matrix.mjs",
+    "check:bundles": "node scripts/check-bundles.mjs",
+    "check:site": "node scripts/check-site.mjs",
     "site": "node scripts/build-site.mjs",
     "check": "node scripts/check-runtime.mjs && node scripts/check-aes.mjs && node scripts/check-mangago.mjs && node scripts/check-xcomic.mjs && node scripts/check-selectors.mjs && node scripts/check-globals.mjs"
   },

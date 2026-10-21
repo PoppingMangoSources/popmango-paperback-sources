@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+
+# Opt in per clone with npm run hooks. No network or device checks run here.
+if [ -n "${CI:-}" ]; then
+  exit 0
+fi
+
+cd "$(git rev-parse --show-toplevel)"
+git diff --check
+npm run verify
