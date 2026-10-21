@@ -18,7 +18,7 @@ jobs:
 
     steps:
       - name: Check out the default branch tooling
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.repository.default_branch }}
           persist-credentials: false
@@ -33,7 +33,7 @@ jobs:
           echo "Removing /$folder"
 
       - name: Check out the published site
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: gh-pages
           path: bundles
