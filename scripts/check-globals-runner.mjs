@@ -30,6 +30,11 @@ try {
     "const root = globalThis; const other = (root); other['Buffer'].from(data)",
     'const root = globalThis; function read() { return root.Buffer; }',
     'const {Buffer: Bytes} = Buffer;',
+    'var root = globalThis; root.Buffer.from(data)',
+    'let root = globalThis; const other = root; other.Buffer.from(data)',
+    'const {Buffer: Bytes} = globalThis; Bytes.from(data)',
+    'const {Buffer} = globalThis; Buffer.from(data)',
+    "let root = globalThis; const {['Buffer']: Bytes} = root; Bytes.from(data)",
   ];
   const accepted = [
     'exports.value = new Uint8Array(8)',
@@ -50,6 +55,13 @@ try {
     'function read(globalThis) { const root = globalThis; return root.Buffer; }',
     'const root = globalThis; function read(root) { return root.Buffer; }',
     'const first = second; const second = first; first.Buffer.from(data)',
+    'let root = globalThis; root = codec; root.Buffer.from(data)',
+    'var root = globalThis; ({root} = codec); root.Buffer.from(data)',
+    'let root = globalThis; [root] = codecs; root.Buffer.from(data)',
+    'let root = globalThis; for (root of codecs) { root.Buffer.from(data); }',
+    'function read(globalThis) { const {Buffer: Bytes} = globalThis; return Bytes; }',
+    'const root = codec; const {Buffer: Bytes} = root;',
+    "const Buffer = 'safe'; const {[Buffer]: Bytes} = globalThis;",
     'function read(globalThis) { return globalThis.Buffer.from(data); }',
     'Buffer: for (;;) { break Buffer; }',
   ];

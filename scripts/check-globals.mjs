@@ -51,24 +51,61 @@ function bufferReferences(file, source) {
   const checker = ts.createProgram([file], options, host).getTypeChecker();
   let count = 0;
 
-  // Follow immutable aliases by symbol so nested scopes and ordinary objects
+  const written = new Set();
+  const markTarget = node => {
+    if (ts.isIdentifier(node)) written.add(checker.getSymbolAtLocation(node));
+    else if (ts.isParenthesizedExpression(node)) markTarget(node.expression);
+    else if (ts.isArrayLiteralExpression(node)) node.elements.forEach(markTarget);
+    else if (ts.isObjectLiteralExpression(node)) node.properties.forEach(property => {
+      if (ts.isShorthandPropertyAssignment(property)) {
+        written.add(checker.getShorthandAssignmentValueSymbol(property));
+      } else if (ts.isPropertyAssignment(property)) markTarget(property.initializer);
+      else if (ts.isSpreadAssignment(property)) markTarget(property.expression);
+    });
+    else if (ts.isSpreadElement(node)) markTarget(node.expression);
+    else if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
+      markTarget(node.left);
+    }
+  };
+  const findWrites = node => {
+    if (ts.isBinaryExpression(node) && ts.isAssignmentOperator(node.operatorToken.kind)) markTarget(node.left);
+    if ((ts.isPrefixUnaryExpression(node) || ts.isPostfixUnaryExpression(node)) &&
+        (node.operator === ts.SyntaxKind.PlusPlusToken || node.operator === ts.SyntaxKind.MinusMinusToken)) {
+      markTarget(node.operand);
+    }
+    if (ts.isForInStatement(node) || ts.isForOfStatement(node)) markTarget(node.initializer);
+    ts.forEachChild(node, findWrites);
+  };
+  findWrites(tree);
+
+  // Follow aliases without writes by symbol so nested scopes and ordinary objects
   // cannot be confused with the real global object. Cycles are not aliases.
   const isGlobalObject = (node, seen = new Set()) => {
     while (ts.isParenthesizedExpression(node)) node = node.expression;
     if (!ts.isIdentifier(node)) return false;
     const symbol = checker.getSymbolAtLocation(node);
     if (node.text === 'globalThis' && !symbol?.declarations?.length) return true;
-    if (!symbol || seen.has(symbol)) return false;
+    if (!symbol || seen.has(symbol) || written.has(symbol)) return false;
     seen.add(symbol);
     const declaration = symbol.valueDeclaration;
     return !!(declaration && ts.isVariableDeclaration(declaration) &&
       ts.isIdentifier(declaration.name) && declaration.initializer &&
       ts.isVariableDeclarationList(declaration.parent) &&
-      (declaration.parent.flags & ts.NodeFlags.Const) &&
+      symbol.declarations?.length === 1 &&
       isGlobalObject(declaration.initializer, seen));
   };
 
   const visit = node => {
+    if (ts.isVariableDeclaration(node) && ts.isObjectBindingPattern(node.name) &&
+        node.initializer && isGlobalObject(node.initializer)) {
+      for (const element of node.name.elements) {
+        if (element.dotDotDotToken) continue;
+        let key = element.propertyName ?? element.name;
+        if (ts.isComputedPropertyName(key)) key = key.expression;
+        if ((ts.isIdentifier(key) || ts.isStringLiteralLike(key)) && key.text === 'Buffer' &&
+            (!element.propertyName || !ts.isComputedPropertyName(element.propertyName) || ts.isStringLiteralLike(key))) count++;
+      }
+    }
     if (ts.isIdentifier(node) && node.text === 'Buffer') {
       const parent = node.parent;
       if (ts.isShorthandPropertyAssignment(parent)) {
