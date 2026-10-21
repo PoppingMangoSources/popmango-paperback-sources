@@ -33,6 +33,7 @@ import {
     type ReaderKeyResponse,
     type Series,
     type SeriesResponse,
+    type UploadChoice,
 } from "./models";
 import { encodePageUrl } from "./network";
 
@@ -346,9 +347,11 @@ const sizeLabel = (mb: number | null | undefined): string | undefined =>
  * Every chapter, one upload per group.
  *
  * A group's best upload of each chapter is kept, its widest and then largest,
- * as the site's chapter list does. With mainOnly only the upload the site
- * lists first is kept; with showSize a group's uploads of different sizes stay
- * apart, each with its size in the title.
+ * as the site's chapter list does; choosing the smallest keeps its lightest
+ * instead. With mainOnly only one upload of each chapter is kept: the one the
+ * site lists first, or with the smallest choice the lightest of them all. With
+ * showSize a group's uploads of different sizes stay apart, each with its size
+ * in the title. Complete uploads always win over partial ones.
  *
  * 0.9 renumbers same-numbered chapters in different volumes, because it merges
  * chapters that share a number. 0.8 lists every chapter by its own id, so the
@@ -357,10 +360,11 @@ const sizeLabel = (mb: number | null | undefined): string | undefined =>
 export const parseChapters = (
     { chapters }: SeriesResponse,
     sourceManga: SourceManga,
-    { mainOnly, showSize }: { mainOnly: boolean; showSize: boolean },
+    { mainOnly, showSize, choice = "best" }: { mainOnly: boolean; showSize: boolean; choice?: UploadChoice },
 ): Chapter[] => {
+    const smallest = choice === "smallest";
     const releases = chapters.flatMap((entry, position) =>
-        (mainOnly ? [entry] : [entry, ...(entry.alts ?? [])]).map((release, index) => ({
+        (mainOnly && !smallest ? [entry] : [entry, ...(entry.alts ?? [])]).map((release, index) => ({
             ...release,
             n: entry.n,
             vol: entry.vol,
@@ -383,11 +387,16 @@ export const parseChapters = (
         ]);
 
     const selected = new Map<string, { release: Release; order: number }>();
-    // Prefer complete uploads, then the widest and largest, then catalogue defaults, position and ID.
+    // Prefer complete uploads, then the widest and largest (or the lightest,
+    // then the widest), then catalogue defaults, position and ID. An upload of
+    // unknown size counts as the heaviest.
+    const compareSize = (a: Release, b: Release): number =>
+        smallest
+            ? (a.mb ?? Infinity) - (b.mb ?? Infinity) || (b.w ?? 0) - (a.w ?? 0)
+            : (b.w ?? 0) - (a.w ?? 0) || (b.mb ?? 0) - (a.mb ?? 0);
     const compareReleases = (a: Release, b: Release): number =>
         Number(!!a.partial) - Number(!!b.partial) ||
-        (b.w ?? 0) - (a.w ?? 0) ||
-        (b.mb ?? 0) - (a.mb ?? 0) ||
+        compareSize(a, b) ||
         Number(b.catalogueDefault) - Number(a.catalogueDefault) ||
         a.position - b.position ||
         a.id - b.id;
@@ -401,7 +410,8 @@ export const parseChapters = (
         const { group } = parseLabel(release, release.n);
         const groupKey = JSON.stringify([
             key,
-            release.group?.slug ?? group?.toLowerCase() ?? "",
+            // Deduplicating to the smallest keeps one upload of a chapter, whoever made it.
+            mainOnly && smallest ? "" : (release.group?.slug ?? group?.toLowerCase() ?? ""),
             showSize ? (sizeLabel(release.mb) ?? "") : "",
         ]);
         const current = selected.get(groupKey);

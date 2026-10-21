@@ -21,8 +21,23 @@ export const STATE_KEYS = {
     HIDDEN_TAGS: "toonkotsu_hidden_tags",
     VISIBLE_SECTIONS: "toonkotsu_visible_sections",
     DEDUPLICATE_CHAPTERS: "toonkotsu_deduplicate_chapters",
+    UPLOAD_CHOICE: "toonkotsu_upload_choice",
     SHOW_UPLOAD_SIZE: "toonkotsu_show_upload_size",
 } as const;
+
+export type UploadChoice = "best" | "smallest";
+
+/**
+ * Which of a chapter's uploads to keep.
+ *
+ * The site often carries the same chapter several times over, at very
+ * different sizes, and every byte of a page is decrypted on the phone before
+ * it can be shown, so the lighter upload is worth offering.
+ */
+export const UPLOAD_CHOICE_OPTIONS: Array<{ id: UploadChoice; title: string }> = [
+    { id: "best", title: "Best quality" },
+    { id: "smallest", title: "Smallest download" },
+];
 
 export const SETTINGS_KEYS = Object.values(STATE_KEYS);
 

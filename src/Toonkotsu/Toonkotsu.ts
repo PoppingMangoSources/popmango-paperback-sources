@@ -52,6 +52,7 @@ import {
     STATE_KEYS,
     STATUS_OPTIONS,
     TYPE_OPTIONS,
+    UPLOAD_CHOICE_OPTIONS,
     filterTag,
     splitFilterTag,
     type FacetsResponse,
@@ -62,6 +63,7 @@ import {
     type SectionId,
     type Series,
     type SeriesListResponse,
+    type UploadChoice,
 } from "./models";
 import {
     ToonkotsuInterceptor,
@@ -95,7 +97,7 @@ import {
 export const ToonkotsuInfo = sourceInfo({
     name: "Toonkotsu",
     description: "Extension that pulls content from toonkotsu.com.",
-    version: "1.1.4",
+    version: "1.1.5",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DOMAIN,
@@ -165,6 +167,14 @@ export class Toonkotsu extends PopmangoSource {
         return this.settings.boolean(STATE_KEYS.DEDUPLICATE_CHAPTERS, false);
     }
 
+    private get uploadChoice(): UploadChoice {
+        return this.settings.choice(
+            STATE_KEYS.UPLOAD_CHOICE,
+            UPLOAD_CHOICE_OPTIONS.map(({ id }) => id),
+            "best",
+        );
+    }
+
     /**
      * Off by default, unlike 0.9.
      *
@@ -222,13 +232,22 @@ export class Toonkotsu extends PopmangoSource {
                 header: "Chapters",
                 footer:
                     "Deduplicate Chapters lists only the upload the site shows first for each chapter, not one from " +
-                    "every group. Upload Size adds each upload's size to its title and lists a group's uploads of " +
-                    "different sizes separately; with it off only the group's best upload is listed.",
+                    "every group. Upload Choice picks among a chapter's uploads: Best Quality keeps each group's " +
+                    "widest, Smallest Download its lightest, which is less to download and decrypt; with Deduplicate " +
+                    "Chapters on, Smallest Download keeps the lightest upload of each chapter from any group. Upload " +
+                    "Size adds each upload's size to its title and lists a group's uploads of different sizes " +
+                    "separately.",
                 rows: [
                     switchRow("deduplicate_chapters", {
                         label: "Deduplicate Chapters",
                         get: () => this.deduplicateChapters,
                         set: (value) => this.settings.set(STATE_KEYS.DEDUPLICATE_CHAPTERS, value),
+                    }),
+                    selectRow("upload_choice", {
+                        label: "Upload Choice",
+                        options: UPLOAD_CHOICE_OPTIONS,
+                        get: () => [this.uploadChoice],
+                        set: (value) => this.settings.set(STATE_KEYS.UPLOAD_CHOICE, value[0] ?? "best"),
                     }),
                     switchRow("show_upload_size", {
                         label: "Upload Size",
@@ -524,6 +543,7 @@ export class Toonkotsu extends PopmangoSource {
         return parseChapters(await fetchSeries(sourceManga.mangaId), sourceManga, {
             mainOnly: this.deduplicateChapters,
             showSize: this.showUploadSize,
+            choice: this.uploadChoice,
         });
     }
 
