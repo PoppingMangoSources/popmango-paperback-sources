@@ -51,68 +51,128 @@ function bufferReferences(file, source) {
   const checker = ts.createProgram([file], options, host).getTypeChecker();
   let count = 0;
 
-  const written = new Set();
-  const markTarget = node => {
-    if (ts.isIdentifier(node)) written.add(checker.getSymbolAtLocation(node));
-    else if (ts.isParenthesizedExpression(node)) markTarget(node.expression);
-    else if (ts.isArrayLiteralExpression(node)) node.elements.forEach(markTarget);
-    else if (ts.isObjectLiteralExpression(node)) node.properties.forEach(property => {
-      if (ts.isShorthandPropertyAssignment(property)) {
-        written.add(checker.getShorthandAssignmentValueSymbol(property));
-      } else if (ts.isPropertyAssignment(property)) markTarget(property.initializer);
-      else if (ts.isSpreadAssignment(property)) markTarget(property.expression);
-    });
-    else if (ts.isSpreadElement(node)) markTarget(node.expression);
-    else if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
-      markTarget(node.left);
-    }
+  const unwrap = node => {
+    while (ts.isParenthesizedExpression(node)) node = node.expression;
+    return node;
   };
-  const findWrites = node => {
-    if (ts.isBinaryExpression(node) && ts.isAssignmentOperator(node.operatorToken.kind)) markTarget(node.left);
+  const propertyKey = node => {
+    if (ts.isComputedPropertyName(node)) {
+      node = unwrap(node.expression);
+      return ts.isStringLiteralLike(node) ? node.text : undefined;
+    }
+    return ts.isIdentifier(node) || ts.isStringLiteralLike(node) ? node.text : undefined;
+  };
+  const blockOf = node => {
+    while (node && !ts.isBlock(node) && !ts.isSourceFile(node)) node = node.parent;
+    return node;
+  };
+  // Record writes with their positions. A later reassignment must not hide an
+  // earlier use; an alias of an alias captures its value at initialization.
+  const writes = new Map();
+  const record = (target, value, writer, definite = false) => {
+    target = unwrap(target);
+    if (ts.isIdentifier(target)) {
+      const symbol = ts.isShorthandPropertyAssignment(target.parent)
+        ? checker.getShorthandAssignmentValueSymbol(target.parent)
+        : checker.getSymbolAtLocation(target);
+      if (!symbol) return;
+      const events = writes.get(symbol) ?? [];
+      events.push({ value, writer, definite, position: writer.end });
+      writes.set(symbol, events);
+    } else if (ts.isArrayLiteralExpression(target)) {
+      target.elements.forEach(item => record(item, undefined, writer, definite));
+    } else if (ts.isObjectLiteralExpression(target)) {
+      target.properties.forEach(item => {
+        if (ts.isShorthandPropertyAssignment(item)) record(item.name, undefined, writer, definite);
+        else if (ts.isPropertyAssignment(item)) record(item.initializer, undefined, writer, definite);
+        else if (ts.isSpreadAssignment(item)) record(item.expression, undefined, writer, definite);
+      });
+    } else if (ts.isSpreadElement(target)) record(target.expression, undefined, writer, definite);
+    else if (ts.isBinaryExpression(target)) record(target.left, undefined, writer, definite);
+  };
+  const collectWrites = node => {
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) {
+      record(node.name, node.initializer, node, true);
+    }
+    if (ts.isBinaryExpression(node) && ts.isAssignmentOperator(node.operatorToken.kind)) {
+      const plain = node.operatorToken.kind === ts.SyntaxKind.EqualsToken;
+      let statement = node.parent;
+      while (ts.isParenthesizedExpression(statement)) statement = statement.parent;
+      const definite = plain && ts.isExpressionStatement(statement) &&
+        (ts.isBlock(statement.parent) || ts.isSourceFile(statement.parent));
+      record(node.left, plain ? node.right : undefined, node, definite);
+    }
     if ((ts.isPrefixUnaryExpression(node) || ts.isPostfixUnaryExpression(node)) &&
         (node.operator === ts.SyntaxKind.PlusPlusToken || node.operator === ts.SyntaxKind.MinusMinusToken)) {
-      markTarget(node.operand);
+      record(node.operand, undefined, node);
     }
-    if (ts.isForInStatement(node) || ts.isForOfStatement(node)) markTarget(node.initializer);
-    ts.forEachChild(node, findWrites);
+    if (ts.isForInStatement(node) || ts.isForOfStatement(node)) record(node.initializer, undefined, node.initializer, true);
+    ts.forEachChild(node, collectWrites);
   };
-  findWrites(tree);
+  collectWrites(tree);
+  for (const events of writes.values()) events.sort((a, b) => a.position - b.position);
 
-  // Follow aliases without writes by symbol so nested scopes and ordinary objects
-  // cannot be confused with the real global object. Cycles are not aliases.
+  // This is bounded static alias analysis, not execution or a complete runtime
+  // audit. Conditional writes retain possible global values. Dynamic keys,
+  // interprocedural argument/return flow and reflective access are not resolved.
   const isGlobalObject = (node, seen = new Set()) => {
-    while (ts.isParenthesizedExpression(node)) node = node.expression;
+    if (!node) return false;
+    node = unwrap(node);
+    if (ts.isConditionalExpression(node)) {
+      return isGlobalObject(node.whenTrue, new Set(seen)) || isGlobalObject(node.whenFalse, new Set(seen));
+    }
+    if (ts.isBinaryExpression(node)) {
+      if (node.operatorToken.kind === ts.SyntaxKind.CommaToken || node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
+        return isGlobalObject(node.right, seen);
+      }
+      if ([ts.SyntaxKind.BarBarToken, ts.SyntaxKind.AmpersandAmpersandToken, ts.SyntaxKind.QuestionQuestionToken].includes(node.operatorToken.kind)) {
+        return isGlobalObject(node.left, new Set(seen)) || isGlobalObject(node.right, new Set(seen));
+      }
+    }
     if (!ts.isIdentifier(node)) return false;
     const symbol = checker.getSymbolAtLocation(node);
-    if (node.text === 'globalThis' && !symbol?.declarations?.length) return true;
-    if (!symbol || seen.has(symbol) || written.has(symbol)) return false;
-    seen.add(symbol);
-    const declaration = symbol.valueDeclaration;
-    return !!(declaration && ts.isVariableDeclaration(declaration) &&
-      ts.isIdentifier(declaration.name) && declaration.initializer &&
-      ts.isVariableDeclarationList(declaration.parent) &&
-      symbol.declarations?.length === 1 &&
-      isGlobalObject(declaration.initializer, seen));
+    if (['globalThis', 'global'].includes(node.text) && !symbol?.declarations?.length) return true;
+    if (!symbol || seen.has(node)) return false;
+    seen.add(node);
+    let global = false;
+    for (const event of writes.get(symbol) ?? []) {
+      if (event.position > node.getStart()) continue;
+      const value = isGlobalObject(event.value, new Set(seen));
+      const loop = event.writer.parent;
+      const sameBlock = blockOf(event.writer) === blockOf(node);
+      const loopBody = (ts.isForInStatement(loop) || ts.isForOfStatement(loop)) &&
+        node.getStart() >= loop.statement.getStart() && node.end <= loop.statement.end;
+      global = event.definite && (sameBlock || loopBody) ? value : global || value;
+    }
+    return global;
   };
+  const readsBuffer = pattern => pattern.some(element => {
+    if (ts.isBindingElement(element)) {
+      return !element.dotDotDotToken && propertyKey(element.propertyName ?? element.name) === 'Buffer';
+    }
+    return (ts.isPropertyAssignment(element) || ts.isShorthandPropertyAssignment(element)) &&
+      propertyKey(element.name) === 'Buffer';
+  });
 
   const visit = node => {
     if (ts.isVariableDeclaration(node) && ts.isObjectBindingPattern(node.name) &&
         node.initializer && isGlobalObject(node.initializer)) {
-      for (const element of node.name.elements) {
-        if (element.dotDotDotToken) continue;
-        let key = element.propertyName ?? element.name;
-        if (ts.isComputedPropertyName(key)) key = key.expression;
-        if ((ts.isIdentifier(key) || ts.isStringLiteralLike(key)) && key.text === 'Buffer' &&
-            (!element.propertyName || !ts.isComputedPropertyName(element.propertyName) || ts.isStringLiteralLike(key))) count++;
-      }
+      if (readsBuffer(node.name.elements)) count++;
     }
+    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+        ts.isObjectLiteralExpression(unwrap(node.left)) && isGlobalObject(node.right) &&
+        readsBuffer(unwrap(node.left).properties)) count++;
     if (ts.isIdentifier(node) && node.text === 'Buffer') {
+      let probe = node;
+      while (ts.isParenthesizedExpression(probe.parent)) probe = probe.parent;
       const parent = node.parent;
+      if (ts.isTypeOfExpression(probe.parent)) return;
       if (ts.isShorthandPropertyAssignment(parent)) {
         if (!checker.getShorthandAssignmentValueSymbol(parent)) count++;
       } else if (
         !(ts.isPropertyAccessExpression(parent) && parent.name === node) &&
         !(ts.isBindingElement(parent) && parent.propertyName === node) &&
+        !(ts.isPropertyAssignment(parent) && parent.name === node) &&
         !ts.isLabeledStatement(parent) && !ts.isBreakStatement(parent) &&
         !ts.isContinueStatement(parent) && !checker.getSymbolAtLocation(node)
       ) {
@@ -121,8 +181,8 @@ function bufferReferences(file, source) {
     }
     if (
       (ts.isPropertyAccessExpression(node) && node.name.text === 'Buffer') ||
-      (ts.isElementAccessExpression(node) && ts.isStringLiteralLike(node.argumentExpression) &&
-        node.argumentExpression.text === 'Buffer')
+      (ts.isElementAccessExpression(node) && ts.isStringLiteralLike(unwrap(node.argumentExpression)) &&
+        unwrap(node.argumentExpression).text === 'Buffer')
     ) {
       if (isGlobalObject(node.expression)) count++;
     }
