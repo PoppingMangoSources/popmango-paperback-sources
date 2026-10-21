@@ -23,7 +23,7 @@ jobs:
 
     steps:
       - name: Check out the branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Resolve the publish folder
         id: folder
@@ -36,7 +36,7 @@ jobs:
       - uses: ./.github/actions/setup-paperback
 
       - name: Check out the published site
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         continue-on-error: true
         with:
           ref: gh-pages
