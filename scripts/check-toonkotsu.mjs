@@ -87,7 +87,7 @@ const pageMask = crypto.createHmac('sha256', hmacKey).update(`page.${pageNonce}`
 const wrapped = Buffer.from(pageKey.map((b, i) => b ^ pageMask[i % 32])).toString('base64url');
 t('  a v1-wrapped page key unwraps', c.unwrapPageKey(readerKey, wrapped, pageNonce), pageKey.toString('base64url'));
 
-console.log('\npage list and the interceptor, with a response that refuses new fields:');
+console.log('\npage list and the interceptor, on a response where only the bytes can be set:');
 const plain = Buffer.concat([Buffer.from('RIFF\0\0\0\0WEBPVP8 '), crypto.randomBytes(2000)]);
 const key = crypto.randomBytes(16), nonce = crypto.randomBytes(12);
 const src = 'https://toonkotsu.com/pages/1.webp';
@@ -103,12 +103,23 @@ t('  masked keys are unwrapped with one', parseChapterPages(masked, readerKey)[0
 // A guest cookie saved by an older build, which would shadow the app's verified session.
 const stored = { retrieve: async () => ({ guest: 'stale' }), store: async () => {} };
 const chain = new InterceptorChain({ cookieStorage: new CookieStorageInterceptor(stored), interceptor: new ToonkotsuInterceptor() });
-const fetchThrough = async (url, locked = true) => {
+// The app's own response, shaped like the 0.8 export: only rawData can be set,
+// and a write to data, status, headers or request throws.
+class AppResponse {
+  #raw; #request;
+  constructor(rawData, request) { this.#raw = rawData; this.#request = request; }
+  get data() { return ''; }
+  get status() { return 200; }
+  get headers() { return { 'content-type': 'application/octet-stream' }; }
+  get request() { return this.#request; }
+  get rawData() { return this.#raw; }
+  set rawData(value) { this.#raw = value; }
+}
+const fetchThrough = async (url, native = true) => {
   const request = await chain.interceptRequest({ url, method: 'GET', headers: {}, cookies: [{ name: 'guest', value: 'stale' }] });
-  // Locked is the app's own object: writable fields, but no new ones, and fixed headers.
-  const response = { status: 200, data: '', rawData: raw(ctr(128, key, nonce.subarray(0, 8), plain)),
-    headers: { 'content-type': 'application/octet-stream' }, request };
-  if (locked) { Object.freeze(response.headers); Object.preventExtensions(response); }
+  const rawData = raw(ctr(128, key, nonce.subarray(0, 8), plain));
+  const response = native ? new AppResponse(rawData, request)
+    : { status: 200, data: '', rawData, headers: { 'content-type': 'application/octet-stream' }, request };
   return { request, response, returned: await chain.interceptResponse(response) };
 };
 const first = await fetchThrough(encrypted);

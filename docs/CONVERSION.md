@@ -167,10 +167,12 @@ may not cover, not because the common case needs it.
 
 The new bytes are written onto the response the app handed over, and that same
 object is returned. Assigning to it is the path 0.8 sources actually take, and
-the app rejects a different object as an invalid return type (error 303), so the
-chain only falls back to one if the original refuses the bytes themselves. The
-content type is written after them on its own: a response that refuses the type
-still goes back to the app, carrying the new bytes.
+the app rejects a different object as an invalid return type (error 303). On
+the app's response only `rawData` can be set — `data`, `status` and `headers`
+are read-only, and writing one throws — so the chain writes only the fields that
+actually changed, and falls back to a copy only when one of them is refused. The
+content type is written after the bytes on its own: a response that refuses the
+type still goes back to the app, carrying the new bytes.
 
 **Home page updates.** 0.9 can invalidate the home page after a setting
 changes. 0.8 decides for itself when to rebuild, so

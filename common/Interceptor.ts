@@ -198,16 +198,22 @@ export class InterceptorChain implements SourceInterceptor {
         // it. Every 0.8 source that rebuilds an image assigns back to this
         // object and returns it unchanged, so that is the path known to work;
         // the app rejects any other object as an invalid return type (error
-        // 303). A host that will not take the body falls through to the copy
-        // below.
+        // 303). On that object only `rawData` can be set: `data`, `status`
+        // and `headers` are read-only, and writing one throws. So a field is
+        // written only when it actually changed, the bytes first, and a body
+        // the original will not take falls through to the copy below.
         const mutable = response as { data?: string; rawData?: RawData; mimeType?: string };
         let written = false;
         try {
-            mutable.data = body.text;
-            mutable.rawData = body.raw;
+            if (body.raw !== response.rawData) {
+                mutable.rawData = body.raw;
+            }
+            if (body.text !== (response.data ?? "")) {
+                mutable.data = body.text;
+            }
             written = true;
         } catch {
-            // Frozen, or the fields are accessors that refuse a write.
+            // A read-only field the change needed, or a frozen response.
         }
 
         if (written) {
