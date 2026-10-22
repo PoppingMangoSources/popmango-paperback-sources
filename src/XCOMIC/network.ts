@@ -19,14 +19,12 @@ import {
     CHAPTER_PAGES_QUERY,
     CHAPTER_PAGE_SIZE,
     COMIC_QUERY,
+    HOME_ROW_SIZE,
     LATEST_UPLOADS_QUERY,
     MIRROR_IDS,
-    PAGE_SIZE,
     RANDOM_AMOUNT,
     RECENTLY_ADDED_QUERY,
-    RECENTLY_ADDED_SIZE,
     TITLE_BROWSE_ITEMS_QUERY,
-    TITLE_BROWSE_PAGER_QUERY,
     TITLE_NODE_QUERY,
     TITLE_RANDOM_QUERY,
     type BrowseSelect,
@@ -37,7 +35,6 @@ import {
     type LatestUploadsResponse,
     type RecentlyAddedResponse,
     type TitleBrowseItemsResponse,
-    type TitleBrowsePagerResponse,
     type TitleBrowseResponse,
     type TitleNodeResponse,
     type TitleRandomResponse,
@@ -133,24 +130,29 @@ export class XComicClient {
         return this.query<TitleRandomResponse>(TITLE_RANDOM_QUERY, { select: { amount: RANDOM_AMOUNT } });
     }
 
+    /**
+     * One page of titles, and whether there is another.
+     *
+     * The site answers the second question with a query of its own and will
+     * not take it alongside the items, so asking costs a request per page. A
+     * full page stands in for it instead; at worst a list ending exactly on a
+     * page boundary costs one empty request at the end.
+     */
     async browse(select: BrowseSelect): Promise<TitleBrowseResponse> {
-        // The items and whether there is a next page are two separate queries.
-        const [items, pager] = await Promise.all([
-            this.query<TitleBrowseItemsResponse>(TITLE_BROWSE_ITEMS_QUERY, { select }),
-            this.query<TitleBrowsePagerResponse>(TITLE_BROWSE_PAGER_QUERY, { select }),
-        ]);
-        return { ...items, ...pager };
+        const items = await this.query<TitleBrowseItemsResponse>(TITLE_BROWSE_ITEMS_QUERY, { select });
+        const full = (items.get_title_browse_items?.length ?? 0) >= select.size;
+        return { ...items, get_title_browse_pager: { next: full ? select.page + 1 : null } };
     }
 
     latestUploads(before?: number): Promise<LatestUploadsResponse> {
         return this.query<LatestUploadsResponse>(LATEST_UPLOADS_QUERY, {
-            select: { first: 0, limit: PAGE_SIZE, ...(before !== undefined ? { before } : {}) },
+            select: { first: 0, limit: HOME_ROW_SIZE, ...(before !== undefined ? { before } : {}) },
         });
     }
 
     recentlyAdded(before?: number): Promise<RecentlyAddedResponse> {
         return this.query<RecentlyAddedResponse>(RECENTLY_ADDED_QUERY, {
-            select: { size: RECENTLY_ADDED_SIZE, ...(before !== undefined ? { before } : {}) },
+            select: { size: HOME_ROW_SIZE, ...(before !== undefined ? { before } : {}) },
         });
     }
 

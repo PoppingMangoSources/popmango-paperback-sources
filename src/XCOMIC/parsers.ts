@@ -66,6 +66,19 @@ const STATUS_LABELS: Record<string, string> = {
 const hasCoverUrl = (url: string | null | undefined): url is string =>
     typeof url === "string" && url.trim().length > 0;
 
+/**
+ * A cover sized for a tile, when the title has one.
+ *
+ * The remote cover runs through an image proxy with its size preset in the
+ * path. The API hands out the 1x preset; the 2x one (about 380×500) is still
+ * sharp on a phone, where the local cover can run to thousands of pixels a
+ * side and over a megabyte. Editions carry only the local cover.
+ */
+const tileCoverUrl = (comic: ComicData): string | undefined => {
+    const remote = comic.remoteCoverUrl?.trim();
+    return remote?.includes("/imgproxy/plain/x250@1/") ? remote.replace("/x250@1/", "/x250@2/") : undefined;
+};
+
 const titleCase = (value: string): string => value.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 
 /** Groups digits in threes, without leaning on a locale the runtime may not carry. */
@@ -388,7 +401,7 @@ export class XComicParser {
         return {
             mangaId: sanitizeId(node.data.id),
             title: this.displayTitle(node.data),
-            imageUrl: this.absoluteUrl(node.data.urlCover ?? node.data.remoteCoverUrl),
+            imageUrl: tileCoverUrl(node.data) ?? this.absoluteUrl(node.data.urlCover ?? node.data.remoteCoverUrl),
         };
     }
 

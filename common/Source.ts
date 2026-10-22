@@ -224,6 +224,18 @@ export abstract class PopmangoSource
         return [];
     }
 
+    /**
+     * A chapter rebuilt from its ids alone, for one the app opens without the
+     * list having been fetched this session.
+     *
+     * Returning one spares refetching the whole chapter list, which a source
+     * can do when `getPages` needs nothing beyond the ids. `undefined`, the
+     * default, refetches the list.
+     */
+    protected chapterFromIds(_mangaId: string, _chapterId: string): Chapter | undefined {
+        return undefined;
+    }
+
     // ---------------------------------------------------------------------
     // What the app calls
     // ---------------------------------------------------------------------
@@ -258,6 +270,7 @@ export abstract class PopmangoSource
      * 0.8 asks for pages by ids alone. The chapter object is recovered from
      * the list fetched a moment ago; if the app skipped straight here — as it
      * does when opening a chapter from the reading queue after a restart — the
+     * source may rebuild it from the ids (`chapterFromIds`), and otherwise the
      * list is fetched again so the source still receives a complete chapter.
      */
     async getChapterDetails(mangaId: string, chapterId: string): Promise<RuntimeChapterDetails> {
@@ -265,6 +278,10 @@ export abstract class PopmangoSource
             let chapter = this.lastChapters.get(chapterId);
 
             if (chapter === undefined || chapter.sourceManga.mangaId !== mangaId) {
+                chapter = this.chapterFromIds(mangaId, chapterId);
+            }
+
+            if (chapter === undefined) {
                 await this.getChapters(mangaId);
                 chapter = this.lastChapters.get(chapterId);
             }

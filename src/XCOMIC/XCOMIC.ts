@@ -38,6 +38,7 @@ import {
     FILTERS,
     FORMAT_OPTIONS,
     GENRE_OPTIONS,
+    HOME_ROW_SIZE,
     LANGUAGE_OPTIONS,
     LEGACY_DEFAULT_TYPE_SETS,
     LEGACY_FORMAT_MAP,
@@ -75,7 +76,7 @@ import { XComicParser, isComicAllowed, toLatestUploadNodes, toPreferredTitleSour
 export const XCOMICInfo = sourceInfo({
     name: "XCOMIC",
     description: "Extension that pulls content from xcomic.me.",
-    version: "1.1.0",
+    version: "1.1.1",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DOMAIN,
@@ -97,7 +98,9 @@ export class XCOMIC extends PopmangoSource {
         super(cheerio, {
             domain: DOMAIN,
             settingsKeys: SETTINGS_KEYS,
-            rateLimit: { numberOfRequests: 3, bufferInterval: 1, ignoreImages: true },
+            // The app's throttle counts page images too, so this also sets how
+            // fast a chapter's pages arrive; 3 a second left pages waiting.
+            rateLimit: { numberOfRequests: 5, bufferInterval: 1, ignoreImages: true },
             interceptor: new XComicInterceptor(mirrorSettingsOf(() => this)),
         });
         this.client = new XComicClient(mirrorSettingsOf(() => this));
@@ -382,6 +385,15 @@ export class XCOMIC extends PopmangoSource {
         return this.parser.chapterDetails(await this.client.chapterPages(id), chapter);
     }
 
+    /**
+     * getPages needs only the ids, so a chapter opened straight from history
+     * does not have to wait for the whole chapter list — thousands of
+     * chapters, for a long series — to be fetched again first.
+     */
+    protected override chapterFromIds(mangaId: string, chapterId: string): Chapter {
+        return { chapterId, chapNum: 0, sourceManga: { mangaId } as SourceManga };
+    }
+
     // -----------------------------------------------------------------
     // Settings
     // -----------------------------------------------------------------
@@ -489,7 +501,9 @@ export class XCOMIC extends PopmangoSource {
     ): Promise<PagedResults<DiscoverSectionItem>> {
         const page = metadata?.page ?? 1;
         const preferences = this.preferences;
-        const response = await this.client.browse(this.browseSelect(page, sortBy, "", undefined, preferences));
+        const response = await this.client.browse(
+            this.browseSelect(page, sortBy, "", undefined, preferences, HOME_ROW_SIZE),
+        );
 
         const nodes = (response.get_title_browse_items ?? []).flatMap((node) => {
             const source = toPreferredTitleSource(node, preferences.translatedLanguages);
@@ -600,6 +614,7 @@ export class XCOMIC extends PopmangoSource {
         word: string,
         filters: SearchFilters | undefined,
         preferences: XComicPreferences,
+        size = PAGE_SIZE,
     ): BrowseSelect {
         const chosen = (section: string): string[] => filters?.included.get(section) ?? [];
         const { min, max } = yearRange(filters?.year);
@@ -609,7 +624,7 @@ export class XCOMIC extends PopmangoSource {
             // without one has nothing for it to do.
             where: word.length > 0 && this.letterMatching ? "letter" : "browse",
             page,
-            size: PAGE_SIZE,
+            size,
             sortby: sortBy,
             word,
             incOLangs: preferences.originalLanguages,
