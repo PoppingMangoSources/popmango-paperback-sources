@@ -76,7 +76,7 @@ These sources have been converted and checked against Paperback 0.8’s availabl
 
 <!-- sources-08:start -->
 
-**22 sources available for Paperback 0.8.**
+**23 sources available for Paperback 0.8.**
 
 | Source | Site |
 | :----- | :--- |
@@ -99,6 +99,7 @@ These sources have been converted and checked against Paperback 0.8’s availabl
 | <img src="media/sources/rokaricomics.png" width="22" align="top"/> **Rokari Comics** | [rokaricomics.com](https://rokaricomics.com) |
 | <img src="media/sources/stonescape.png" width="22" align="top"/> **StoneScape** | [stonescape.xyz](https://stonescape.xyz) |
 | <img src="media/sources/templescan.png" width="22" align="top"/> **Temple Scan** | [templetoons.com](https://templetoons.com) |
+| <img src="media/sources/toonkotsu.png" width="22" align="top"/> **Toonkotsu** | [toonkotsu.com](https://toonkotsu.com) |
 | <img src="media/sources/valirscans.png" width="22" align="top"/> **Valir Scans** | [valirscans.org](https://valirscans.org) |
 | <img src="media/sources/vymanga.png" width="22" align="top"/> **VyManga** | [mangavyvy.net](https://mangavyvy.net) |
 | <img src="media/sources/xcomic.png" width="22" align="top"/> **XCOMIC** | [xcomic.me](https://xcomic.me) |
