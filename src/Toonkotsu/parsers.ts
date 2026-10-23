@@ -320,7 +320,7 @@ const parseChapterSeason = (entry: ChapterEntry): number | undefined => {
     return match ? Number(match[1]) : undefined;
 };
 
-// The site separates volumes/seasons when at least three chapter numbers occur in multiple ones.
+// The site separates seasons when at least three chapter numbers occur in multiple ones.
 const hasChapterNumberResets = (
     entries: ChapterEntry[],
     section: (entry: ChapterEntry) => number | undefined,
@@ -377,11 +377,13 @@ export const parseChapters = (
     );
     type Release = (typeof releases)[number];
 
-    const byVolume = hasChapterNumberResets(releases, (entry) => parseChapterNumber(entry.vol));
+    // A chapter in another volume is another chapter, however few numbers
+    // repeat. Seasons are only read from labels, so they count once the site
+    // itself would separate them.
     const bySeason = hasChapterNumberResets(releases, parseChapterSeason);
     const chapterKey = (release: Release): string =>
         JSON.stringify([
-            byVolume ? (parseChapterNumber(release.vol) ?? release.vol?.toString().trim().toLowerCase()) : "",
+            parseChapterNumber(release.vol) ?? release.vol?.toString().trim().toLowerCase() ?? "",
             bySeason ? (parseChapterSeason(release) ?? 1) : "",
             parseChapterNumber(release.n) ?? `id:${release.canonicalId}`,
         ]);

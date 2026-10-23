@@ -136,11 +136,20 @@ const series = { chapters: [
   { id: 3, n: 3, label: 'Chapter 3', group: { slug: 'a', name: 'A' }, w: 800, mb: 12, alts: [{ id: 33, group: { slug: 'b', name: 'B' }, w: 720, mb: 9 }] },
   { id: 2, n: 2, label: 'Chapter 2', group: { slug: 'a', name: 'A' }, w: 800, mb: 11, alts: [{ id: 22, group: { slug: 'a', name: 'A' }, w: 720, mb: 7 }] },
 ] };
-const ids = options => parseChapters(series, { mangaId: 'x' }, { showSize: false, ...options }).map(ch => ch.chapterId).join(',');
+const ids = (options, from = series) => parseChapters(from, { mangaId: 'x' }, { showSize: false, ...options }).map(ch => ch.chapterId).join(',');
 t('  Best Quality keeps each group\'s widest', ids({ mainOnly: false }), '3,33,2');
 t('  Best Quality + Deduplicate keeps the first listed', ids({ mainOnly: true }), '3,2');
 t('  Smallest keeps each group\'s lightest', ids({ mainOnly: false, choice: 'smallest' }), '3,33,22');
 t('  Smallest + Deduplicate keeps each chapter\'s lightest', ids({ mainOnly: true, choice: 'smallest' }), '33,22');
+
+console.log('\nvolumes:');
+// Two volumes that each start again at chapter 1, from one group: fewer
+// repeated numbers than the site needs before it splits a list by volume.
+const restarted = { chapters: [[2, 2], [2, 1], [1, 2], [1, 1]].map(([vol, n]) =>
+  ({ id: vol * 10 + n, n, vol, label: `Chapter ${n}`, group: { slug: 'a', name: 'A' } })) };
+t('  two numbers repeated across volumes stay four chapters', ids({ mainOnly: false }, restarted), '22,21,12,11');
+t('  and still four with Deduplicate Chapters on', ids({ mainOnly: true }, restarted), '22,21,12,11');
+t('  and with Smallest Download', ids({ mainOnly: true, choice: 'smallest' }, restarted), '22,21,12,11');
 
 rmSync(out, { recursive: true, force: true });
 console.log(fail ? `\n${fail} FAILED` : '\nall passed');
