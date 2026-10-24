@@ -8,6 +8,7 @@ import type {
     ChapterDetails as RuntimeChapterDetails,
     ChapterProviding,
     CloudflareBypassRequestProviding,
+    Cookie,
     HomePageSectionsProviding,
     HomeSection,
     PagedResults as RuntimePagedResults,
@@ -148,7 +149,10 @@ export abstract class PopmangoSource
         this.cookieStorage = new CookieStorageInterceptor(this.stateManager);
         this.settings = new SettingsStore(this.stateManager, options.settingsKeys ?? []);
 
-        const manager = (limit?: { numberOfRequests: number; bufferInterval: number }): RequestManager =>
+        const manager = (
+            limit: { numberOfRequests: number; bufferInterval: number } | undefined,
+            sharedCookies?: () => Cookie[] | undefined,
+        ): RequestManager =>
             App.createRequestManager({
                 requestsPerSecond: limit
                     ? Math.max(1, Math.round(limit.numberOfRequests / Math.max(1, limit.bufferInterval)))
@@ -157,11 +161,17 @@ export abstract class PopmangoSource
                 interceptor: new InterceptorChain({
                     cookieStorage: this.cookieStorage,
                     interceptor: options.interceptor,
+                    sharedCookies,
                 }),
             });
         this.requestManager = manager(options.rateLimit);
 
-        Application.bind(options.apiRateLimit ? manager(options.apiRateLimit) : this.requestManager, cheerio);
+        Application.bind(
+            options.apiRateLimit
+                ? manager(options.apiRateLimit, () => this.requestManager.cookieStore?.getAllCookies())
+                : this.requestManager,
+            cheerio,
+        );
     }
 
     // ---------------------------------------------------------------------

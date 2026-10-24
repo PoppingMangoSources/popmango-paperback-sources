@@ -126,13 +126,21 @@ export class CookieStorageInterceptor {
 export class InterceptorChain implements SourceInterceptor {
     private readonly cookieStorage?: CookieStorageInterceptor;
     private readonly interceptor?: PaperbackInterceptor;
+    private readonly sharedCookies?: () => Cookie[] | undefined;
 
     constructor(options: {
         cookieStorage?: CookieStorageInterceptor;
         interceptor?: PaperbackInterceptor;
+        /**
+         * Another manager's native cookies. The app saves a Cloudflare
+         * clearance into the source's main manager, and a second manager may
+         * not share that store, so it sends those cookies itself.
+         */
+        sharedCookies?: () => Cookie[] | undefined;
     }) {
         this.cookieStorage = options.cookieStorage;
         this.interceptor = options.interceptor;
+        this.sharedCookies = options.sharedCookies;
     }
 
     async interceptRequest(request: Request): Promise<Request> {
@@ -141,6 +149,7 @@ export class InterceptorChain implements SourceInterceptor {
             method: request.method,
             headers: { ...request.headers },
             cookies: {
+                ...this.borrowedCookies(request.url),
                 ...(await this.cookieStorage?.all()),
                 ...cookiesToRecord(request.cookies),
             },
@@ -160,6 +169,29 @@ export class InterceptorChain implements SourceInterceptor {
             data: intercepted.data,
             cookies: recordToCookies(intercepted.cookies, hostOf(intercepted.url)),
         });
+    }
+
+    private borrowedCookies(url: string): Record<string, string> {
+        if (this.sharedCookies === undefined) {
+            return {};
+        }
+        let cookies: Cookie[];
+        try {
+            cookies = this.sharedCookies() ?? [];
+        } catch {
+            return {};
+        }
+        const host = hostOf(url);
+        const now = Date.now();
+        const borrowed: Record<string, string> = {};
+        for (const cookie of cookies) {
+            const domain = cookie.domain.replace(/^\./, "").toLowerCase();
+            const expired = cookie.expires !== undefined && cookie.expires.getTime() <= now;
+            if (!expired && domain && (host === domain || host.endsWith(`.${domain}`))) {
+                borrowed[cookie.name] = cookie.value;
+            }
+        }
+        return borrowed;
     }
 
     async interceptResponse(response: Response): Promise<Response> {
