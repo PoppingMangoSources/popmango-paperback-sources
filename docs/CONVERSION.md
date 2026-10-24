@@ -188,7 +188,8 @@ sections appear the next time the reader opens the page.
 
 **Settings screens.** 0.9 forms become `getSettingsSections()`, built from the
 row helpers in `common/Menu.ts` and declaring `Capability.SETTINGS`. The base
-class wraps them in the single section 0.8's `getSourceMenu()` asks for.
+class wraps them in the single section 0.8's `getSourceMenu()` asks for. A
+reorderable list has no 0.8 row, so a home page keeps the source's own row order.
 Because 0.8's state store is asynchronous and a setting may be read from
 somewhere that cannot wait — an interceptor rewriting a header, a URL being
 assembled — every declared key is read into `this.settings` before any source
