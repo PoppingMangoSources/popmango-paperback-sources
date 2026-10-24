@@ -59,7 +59,7 @@ console.log('\nCurly quotes from iOS autocorrect:');
 t('  single and double quotes become straight', plainQuotes('Boys’ Love “foo”'), 'Boys\' Love "foo"');
 
 class Fixture extends PopmangoSource {
-  constructor(chapters) { super(require('cheerio'), { domain: 'https://example.com', settingsKeys: [] }); this.chapters = chapters; this.seen = undefined; }
+  constructor(chapters, options = {}) { super(require('cheerio'), { domain: 'https://example.com', settingsKeys: [], ...options }); this.chapters = chapters; this.seen = undefined; }
   async getMangaInfo(mangaId) { return { mangaId, mangaInfo: { primaryTitle: 'T', secondaryTitles: [], thumbnailUrl: '', synopsis: '' } }; }
   async getChapterList() { return this.chapters; }
   async getPages() { return { id: 'c', mangaId: 'm', pages: [] }; }
@@ -77,6 +77,20 @@ t('  a listed chapter still comes through', listed.length, 1);
 const searching = new Fixture([]);
 await searching.getSearchResults({ title: 'Boys’ Love', includedTags: [], excludedTags: [], parameters: { tags: '‘Gore’', page: 2 } }, undefined);
 t('  search text and typed fields lose curly quotes', [searching.seen.title, searching.seen.parameters], ['Boys\' Love', { tags: '\'Gore\'', page: 2 }]);
+
+console.log('\nA slower API limit leaves pages at the main rate:');
+const { Application } = require(path.join(out, 'common', 'Runtime.js'));
+const scheduled = [];
+const realManager = App.createRequestManager;
+App.createRequestManager = options => ({ ...realManager(options), schedule: async () => { scheduled.push(options.requestsPerSecond); return { status: 200, headers: {}, data: '' }; } });
+const paced = new Fixture([], { rateLimit: { numberOfRequests: 10, bufferInterval: 1 }, apiRateLimit: { numberOfRequests: 1, bufferInterval: 1 } });
+await Application.scheduleRequest({ url: 'https://api.example.com/a' });
+t('  the page manager keeps the main rate', paced.requestManager.requestsPerSecond, 10);
+t('  the source\'s own requests use the API rate', scheduled, [1]);
+const unpaced = new Fixture([], { rateLimit: { numberOfRequests: 5, bufferInterval: 1 } });
+await Application.scheduleRequest({ url: 'https://api.example.com/b' });
+t('  without one, both share the main manager', [unpaced.requestManager.requestsPerSecond, scheduled[1]], [5, 5]);
+App.createRequestManager = realManager;
 
 rmSync(out, { recursive: true, force: true });
 if (fail) { console.error(`\n${fail} failed`); process.exit(1); }

@@ -43,6 +43,8 @@ name and icon path because the official bundler discovers them by convention.
   on a global constructor or browser URL resolution.
 - `common/Source.ts` creates the native request manager and translates
   `rateLimit` to `requestsPerSecond`. There is no source-side timer limiter.
+  The throttle counts page images too (`ignoreImages` does nothing); a slower
+  `apiRateLimit` sends the source's own requests through a second manager.
 - `common/Interceptor.ts` and `common/Cloudflare.ts` own cookie and challenge
   plumbing. Do not add a generic browser session or assume redirect response
   URLs are reported by 0.8.

@@ -146,6 +146,13 @@ either — a source cannot wait. Throttling is therefore the app's job:
 and nothing in a source paces itself. A retry loop retries immediately or not
 at all.
 
+That throttle also covers page images, which the app loads through the same
+request manager, so 0.9's `ignoreImages` has no effect here. A site whose API
+allows far fewer requests than its image host sets `apiRateLimit` as well: the
+source's own requests then go through a second, slower manager and pages keep
+`rateLimit`. QiScans does this, since its API runs out during a library refresh
+at more than one request a second.
+
 This one is worth being careful about, because the typechecker does not help.
 `@types/node` declares the timer functions globally and cheerio pulls those
 declarations in, so `setTimeout` compiles cleanly and then fails on a device
