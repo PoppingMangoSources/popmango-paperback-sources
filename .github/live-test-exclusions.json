@@ -1,4 +1,1 @@
-{
-  "BunManga": "2026-10-21: the official Node request to the homepage returned HTTP 502 and the suite received empty home rows. Direct curl returned 200, so this is runner-path specific; recheck manually before re-enabling.",
-  "RinkoComics": "2026-10-21: the official Node request to the homepage returned HTTP 502 and the suite received empty home rows. Direct curl returned 200, so this is runner-path specific; recheck manually before re-enabling."
-}
+{}
