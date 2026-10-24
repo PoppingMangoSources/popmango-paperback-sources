@@ -76,7 +76,7 @@ These sources have been converted and checked against Paperback 0.8’s availabl
 
 <!-- sources-08:start -->
 
-**21 sources available for Paperback 0.8.**
+**23 sources available for Paperback 0.8.**
 
 | Source | Site |
 | :----- | :--- |
@@ -92,6 +92,7 @@ These sources have been converted and checked against Paperback 0.8’s availabl
 | <img src="media/sources/mangago.png" width="22" align="top"/> **Mangago** | [mangago.me](https://www.mangago.me) |
 | <img src="media/sources/mangatown.png" width="22" align="top"/> **MangaTown** | [mangatown.com](https://www.mangatown.com) |
 | <img src="media/sources/myreadingmanga.png" width="22" align="top"/> **MyReadingManga** | [myreadingmanga.info](https://myreadingmanga.info) |
+| <img src="media/sources/qiscans.png" width="22" align="top"/> **QiScans** | [qimanga.com](https://qimanga.com) |
 | <img src="media/sources/reimanga.png" width="22" align="top"/> **ReiManga** | [reimanga.net](https://reimanga.net) |
 | <img src="media/sources/rinkocomics.png" width="22" align="top"/> **RinkoComics** | [rinkocomics.com](https://rinkocomics.com) |
 | <img src="media/sources/rokaricomics.png" width="22" align="top"/> **Rokari Comics** | [rokaricomics.com](https://rokaricomics.com) |
@@ -101,6 +102,7 @@ These sources have been converted and checked against Paperback 0.8’s availabl
 | <img src="media/sources/valirscans.png" width="22" align="top"/> **Valir Scans** | [valirscans.org](https://valirscans.org) |
 | <img src="media/sources/vymanga.png" width="22" align="top"/> **VyManga** | [mangavyvy.net](https://mangavyvy.net) |
 | <img src="media/sources/xcomic.png" width="22" align="top"/> **XCOMIC** | [xcomic.me](https://xcomic.me) |
+| <img src="media/sources/yaoime.png" width="22" align="top"/> **YaoiMe** | [yaoi.me](https://yaoi.me) |
 
 <!-- sources-08:end -->
 
