@@ -60,8 +60,16 @@ export class KaganeInterceptor extends PaperbackInterceptor {
         // so they carry the site as origin too.
         const site = `https://${mirrorOf(request.url) ?? this.mirror()}`;
 
+        // A page past its token is signed again here, the one place the
+        // reader's request can still be changed before it goes out. A failed
+        // renewal sends the page as it was, to fail the way it would have.
+        const url = isTrustedHost(hostOf(request.url).toLowerCase())
+            ? await freshPageUrl(`https://${this.mirror()}`, request.url).catch(() => request.url)
+            : request.url;
+
         return {
             ...request,
+            url,
             headers: {
                 ...request.headers,
                 origin: site,
@@ -568,4 +576,87 @@ export function pageUrl(cacheUrl: string, chapterId: string, fileName: string, t
         .setQueryItem("token", token)
         .setQueryItem("is_datasaver", "false")
         .build();
+}
+
+// ---------------------------------------------------------------------------
+// Keeping an open chapter readable
+// ---------------------------------------------------------------------------
+
+/** A page's address: the chapter and file, then the token it was signed with. */
+const PAGE_PATH = /\/api\/v2\/books\/page\/([0-9a-f-]{36})\/([^/?#]+)\?(?:[^#]*&)?token=([^&#]+)/i;
+
+/** Pages are re-signed this long before their token runs out, to cover the download. */
+const PAGE_TOKEN_MARGIN_MS = 30_000;
+
+/** Fresh sessions by chapter, so the pages of one chapter share a single renewal. */
+const renewals = new Map<string, Promise<{ cacheUrl: string; token: string; expiresAt: number; files: Set<string> }>>();
+const RENEWAL_LIMIT = 8;
+
+/** When a reader token ends, from its own claims; undefined when it cannot be read. */
+export function tokenExpiry(token: string): number | undefined {
+    try {
+        const claims: unknown = JSON.parse(Application.base64Decode(token.split(".")[1] ?? ""));
+        const exp = typeof claims === "object" && claims !== null ? (claims as { exp?: unknown }).exp : undefined;
+        return typeof exp === "number" && Number.isFinite(exp) ? exp * 1000 : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
+/**
+ * A page's address with a token that will still be accepted.
+ *
+ * A chapter's token lasts twenty minutes, and the reader asks for pages as
+ * they are reached, so a chapter left open would stop loading partway. The
+ * page is signed again as it is asked for instead: an address whose token is
+ * still good is returned untouched, and one near its end gets the chapter's
+ * renewed session. Pages are matched by file name, since a renewed session
+ * may name a different CDN.
+ */
+export async function freshPageUrl(site: string, url: string, now = Date.now()): Promise<string> {
+    const match = PAGE_PATH.exec(url);
+    const [, chapterId, fileName, token] = match ?? [];
+    if (chapterId === undefined || fileName === undefined || token === undefined) {
+        return url;
+    }
+
+    const expiresAt = tokenExpiry(decodeURIComponent(token));
+    if (expiresAt === undefined || expiresAt - PAGE_TOKEN_MARGIN_MS > now) {
+        return url;
+    }
+
+    // Pages asked for together wait on one renewal rather than each starting one.
+    // Looked up without yielding first, so a second page cannot slip past an
+    // unstarted renewal and start its own.
+    const pending = renewals.get(chapterId);
+    let session = pending !== undefined ? await pending.catch(() => undefined) : undefined;
+    const newer = renewals.get(chapterId);
+    if (newer !== undefined && newer !== pending) {
+        session = await newer.catch(() => undefined);
+    }
+    if (session === undefined || session.expiresAt - PAGE_TOKEN_MARGIN_MS <= now) {
+        const renewal = openReader(site, chapterId).then((opened) => ({
+            cacheUrl: opened.cache_url,
+            token: opened.access_token,
+            // An unreadable expiry is retried a minute on, not held forever.
+            expiresAt: tokenExpiry(opened.access_token) ?? now + 2 * PAGE_TOKEN_MARGIN_MS,
+            files: new Set((opened.manifest?.pages ?? []).map((page) => `${page.page_id}.${page.ext ?? "jxl"}`)),
+        }));
+        renewals.delete(chapterId);
+        renewals.set(chapterId, renewal);
+        for (const key of renewals.keys()) {
+            if (renewals.size <= RENEWAL_LIMIT) break;
+            renewals.delete(key);
+        }
+        // A failed renewal is not kept, so the next page tries again.
+        renewal.catch(() => {
+            if (renewals.get(chapterId) === renewal) renewals.delete(chapterId);
+        });
+        session = await renewal;
+    }
+
+    if (!session.files.has(fileName)) {
+        throw new Error("Kagane changed this chapter's pages. Reopen the chapter.");
+    }
+    return pageUrl(session.cacheUrl, chapterId, fileName, session.token);
 }
