@@ -49,6 +49,7 @@ import {
     filterTag,
     splitFilterTag,
     type BrowseOptions,
+    type ChapterOptions,
     type PageMetadata,
     type Preferences,
     type ReaderPage,
@@ -76,7 +77,7 @@ import {
 export const YaoiMeInfo = sourceInfo({
     name: "YaoiMe",
     description: "Extension that pulls boys' love manga, manhwa and manhua from yaoi.me.",
-    version: "1.0.0",
+    version: "1.0.1",
     icon: "icon.png",
     language: "Multi",
     websiteBaseURL: DOMAIN,
@@ -99,7 +100,8 @@ export class YaoiMe extends PopmangoSource {
         super(cheerio, {
             domain: DOMAIN,
             settingsKeys: SETTINGS_KEYS,
-            rateLimit: { numberOfRequests: 5, bufferInterval: 2 },
+            // The app's throttle also spaces out page images, which the site serves in quick bursts
+            rateLimit: { numberOfRequests: 10, bufferInterval: 1 },
             interceptor: new YaoiMeInterceptor(
                 () => this.preferences,
                 () => this.visibleSections,
@@ -108,9 +110,9 @@ export class YaoiMe extends PopmangoSource {
     }
 
     private get preferences(): Preferences {
-        const languages = this.settings.stringArray(STATE_KEYS.CHAPTER_LANGUAGES);
-        const ratings = this.settings.stringArray(STATE_KEYS.CONTENT_RATINGS);
-        const types = this.settings.stringArray(STATE_KEYS.CONTENT_TYPES);
+        const languages = this.settings.stringArray(STATE_KEYS.CHAPTER_LANGUAGES, ids(LANGUAGE_OPTIONS));
+        const ratings = this.settings.stringArray(STATE_KEYS.CONTENT_RATINGS, ids(CONTENT_RATING_OPTIONS));
+        const types = this.settings.stringArray(STATE_KEYS.CONTENT_TYPES, ids(TYPE_OPTIONS));
         return {
             chapterLanguages: languages.length > 0 ? languages : DEFAULT_LANGUAGES,
             contentRatings: ratings.length > 0 ? ratings : CONTENT_RATING_OPTIONS.map(({ id }) => id),
@@ -125,6 +127,16 @@ export class YaoiMe extends PopmangoSource {
         return chosen.length > 0 ? SECTION_IDS.filter((id) => chosen.includes(id)) : SECTION_IDS;
     }
 
+    private get chapterOptions(): ChapterOptions {
+        return {
+            languages: this.preferences.chapterLanguages,
+            dedupe: this.settings.boolean(STATE_KEYS.DEDUPE, false),
+            showSize: this.settings.boolean(STATE_KEYS.UPLOAD_SIZE, false),
+            sources: names(this.settings.string(STATE_KEYS.UPLOAD_SOURCES, "")),
+            sourcesOnly: this.settings.boolean(STATE_KEYS.UPLOAD_SOURCES_ONLY, false),
+        };
+    }
+
     override getMangaShareUrl(mangaId: string): string {
         return `${DOMAIN}${mangaId}`;
     }
@@ -137,13 +149,13 @@ export class YaoiMe extends PopmangoSource {
             {
                 id: "content",
                 header: "What to show",
-                footer: "Ticking nothing means all of them, except languages, which default to English.",
+                footer: "Unticking everything goes back to the defaults: English, and every rating and type.",
                 rows: [
                     selectRow("chapter_languages", {
                         label: "Chapter languages",
                         options: LANGUAGE_OPTIONS,
                         multiple: true,
-                        get: () => this.settings.stringArray(STATE_KEYS.CHAPTER_LANGUAGES),
+                        get: () => this.preferences.chapterLanguages,
                         set: (value) => {
                             this.settings.set(STATE_KEYS.CHAPTER_LANGUAGES, value);
                             forget();
@@ -153,7 +165,7 @@ export class YaoiMe extends PopmangoSource {
                         label: "Content ratings",
                         options: CONTENT_RATING_OPTIONS,
                         multiple: true,
-                        get: () => this.settings.stringArray(STATE_KEYS.CONTENT_RATINGS),
+                        get: () => this.preferences.contentRatings,
                         set: (value) => {
                             this.settings.set(STATE_KEYS.CONTENT_RATINGS, value);
                             forget();
@@ -163,7 +175,7 @@ export class YaoiMe extends PopmangoSource {
                         label: "Types",
                         options: TYPE_OPTIONS,
                         multiple: true,
-                        get: () => this.settings.stringArray(STATE_KEYS.CONTENT_TYPES),
+                        get: () => this.preferences.contentTypes,
                         set: (value) => {
                             this.settings.set(STATE_KEYS.CONTENT_TYPES, value);
                             forget();
@@ -190,25 +202,53 @@ export class YaoiMe extends PopmangoSource {
             {
                 id: "chapters",
                 header: "Chapters",
-                footer: "Shows each chapter once, from its first upload, like the site's deduplicate option. Extras and unnumbered chapters are hidden.",
+                footer:
+                    "One entry per chapter keeps each chapter's first upload, like the site's deduplicate option, " +
+                    "and hides extras and unnumbered chapters. Upload size adds each upload's size to its title, " +
+                    "so the sharpest one is easy to spot.",
                 rows: [
                     switchRow("dedupe_chapters", {
                         label: "One entry per chapter",
                         get: () => this.settings.boolean(STATE_KEYS.DEDUPE, false),
                         set: (value) => this.settings.set(STATE_KEYS.DEDUPE, value),
                     }),
+                    switchRow("upload_size", {
+                        label: "Upload size",
+                        get: () => this.settings.boolean(STATE_KEYS.UPLOAD_SIZE, false),
+                        set: (value) => this.settings.set(STATE_KEYS.UPLOAD_SIZE, value),
+                    }),
+                ],
+            },
+            {
+                id: "upload_sources",
+                header: "Upload sources",
+                footer:
+                    "Names as they appear beside each chapter, e.g. Mangak, Comix. A name also matches longer ones, " +
+                    "so Mangafire covers Mangafire2026. Listed sources are hidden, or with Only these turned on, " +
+                    "they are the only ones shown.",
+                rows: [
+                    inputRow("upload_sources", {
+                        label: "Sources (comma separated)",
+                        get: () => this.settings.string(STATE_KEYS.UPLOAD_SOURCES, ""),
+                        set: (value) => this.settings.set(STATE_KEYS.UPLOAD_SOURCES, value),
+                    }),
+                    switchRow("upload_sources_only", {
+                        label: "Only these",
+                        get: () => this.settings.boolean(STATE_KEYS.UPLOAD_SOURCES_ONLY, false),
+                        set: (value) => this.settings.set(STATE_KEYS.UPLOAD_SOURCES_ONLY, value),
+                    }),
                 ],
             },
             {
                 id: "home",
                 header: "Home page",
-                footer: "Leave everything unticked to show every row.",
+                footer: "Unticking everything shows every row.",
                 rows: [
                     selectRow("visible_sections", {
                         label: "Rows shown",
                         options: SECTION_OPTIONS,
                         multiple: true,
-                        get: () => this.settings.stringArray(STATE_KEYS.VISIBLE_SECTIONS),
+                        get: () => this.visibleSections,
                         set: (value) => this.settings.set(STATE_KEYS.VISIBLE_SECTIONS, value),
                     }),
                 ],
@@ -347,12 +387,7 @@ export class YaoiMe extends PopmangoSource {
     }
 
     async getChapterList(sourceManga: SourceManga): Promise<Chapter[]> {
-        return parseChapters(
-            await this.fetchSeries(sourceManga.mangaId),
-            sourceManga,
-            this.preferences.chapterLanguages,
-            this.settings.boolean(STATE_KEYS.DEDUPE, false),
-        );
+        return parseChapters(await this.fetchSeries(sourceManga.mangaId), sourceManga, this.chapterOptions);
     }
 
     async getPages(chapter: Chapter): Promise<ChapterDetails> {
@@ -449,6 +484,8 @@ export class YaoiMe extends PopmangoSource {
         }
     }
 }
+
+const ids = (options: Tag[]): ReadonlySet<string> => new Set(options.map(({ id }) => id));
 
 function names(text: string | undefined): string[] {
     return plainQuotes(text ?? "")

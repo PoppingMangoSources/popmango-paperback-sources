@@ -22,6 +22,7 @@ import {
     FILTERS,
     filterTag,
     type ChapterGroup,
+    type ChapterOptions,
     type ChapterVariant,
     type ContentRatingName,
     type MangaCard,
@@ -124,7 +125,7 @@ function parseCard($: CheerioAPI, node: AnyNode): MangaCard | undefined {
     const typeName = cleanText(
         facts
             .children("span")
-            .filter((_, item) => /^(?:Manga|Manhwa|Manhua|OEL|Novel|Other)$/i.test($(item).text().trim()))
+            .filter((_, item) => /^(?:Doujinshi|Manga|Manhwa|Manhua|OEL|Novel|Other)$/i.test($(item).text().trim()))
             .first()
             .text(),
     );
@@ -272,6 +273,7 @@ export function parseGenres($: CheerioAPI): Tag[] {
 function statusOf(value: string | undefined): string {
     switch (value?.toLowerCase()) {
         case "ongoing":
+        case "releasing":
             return MangaStatus.ONGOING;
         case "completed":
             return MangaStatus.COMPLETED;
@@ -422,12 +424,7 @@ const validDate = (value?: number): Date | undefined => {
 
 // The HTML renders only the first rows; the full list, with every upload of each chapter, is in
 // the page payload. Each upload is a chapter, grouped by its upload source.
-export function parseChapters(
-    $: CheerioAPI,
-    sourceManga: SourceManga,
-    languages: string[],
-    dedupe: boolean,
-): Chapter[] {
+export function parseChapters($: CheerioAPI, sourceManga: SourceManga, options: ChapterOptions): Chapter[] {
     const payload = flightData($);
     const groupsAt = payload.indexOf('"groups":[{');
     const groupsJson = groupsAt >= 0 ? sliceJson(payload, groupsAt + '"groups":'.length) : undefined;
@@ -446,25 +443,35 @@ export function parseChapters(
         throw new Error("Yaoi.me returned a chapter list that could not be read.");
     }
 
+    const allowed = sourceFilter(options.sources, options.sourcesOnly);
+    let hidden = 0;
     // Oldest first, keeping the site's placement of extras between chapters
     const inLanguage = [...groups].reverse().flatMap((group) => {
         const variants = group.variants.filter(
             (variant) =>
-                typeof variant?.id === "number" && typeof variant.s === "number" && languages.includes(variant.lang || "en"),
+                typeof variant?.id === "number" &&
+                typeof variant.s === "number" &&
+                options.languages.includes(variant.lang || "en"),
         );
-        return variants.length > 0 ? [{ group, variants }] : [];
+        const shown = variants.filter((variant) => allowed(sources[variant.s] ?? ""));
+        hidden += variants.length - shown.length;
+        return shown.length > 0 ? [{ group, variants: shown }] : [];
     });
+    if (inLanguage.length === 0 && hidden > 0) {
+        throw new Error("Every upload of this title comes from a source your Upload sources setting hides.");
+    }
+
     const toChapter = (group: ChapterGroup, variant: ChapterVariant, title: string | undefined, date?: number) => ({
         chapterId: `/chapter/${variant.s}/${variant.id}`,
         sourceManga,
-        title,
+        title: withSize(title, options.showSize ? variant.b : undefined),
         chapNum: numbered(group) ? group.num : 0,
         volume: typeof group.vol === "number" && group.vol > 0 ? group.vol : undefined,
         publishDate: validDate(date ?? group.createdAt),
         langCode: variant.lang || "en",
     });
 
-    if (dedupe) {
+    if (options.dedupe) {
         const deduped = dedupeChapters(inLanguage).map(({ group, variant, date }, index): Chapter => ({
             ...toChapter(group, variant, undefined, date),
             chapNum: Math.floor(group.num),
@@ -496,6 +503,25 @@ export function parseChapters(
             };
         });
     });
+}
+
+const sizeLabel = (bytes?: number): string | undefined =>
+    bytes && bytes > 0 ? `${Number((bytes / 1_000_000).toFixed(bytes >= 100_000_000 ? 0 : 1))} MB` : undefined;
+
+const withSize = (title: string | undefined, bytes?: number): string | undefined => {
+    const size = sizeLabel(bytes);
+    return title && size ? `${title} (${size})` : (title ?? size);
+};
+
+const sourceKey = (name: string): string => name.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+// A listed name matches any source containing it, so "mangafire" also covers "mangafire2026".
+function sourceFilter(names: string[], only: boolean): (source: string) => boolean {
+    const keys = names.map(sourceKey).filter((key) => key.length > 0);
+    if (keys.length === 0) {
+        return () => true;
+    }
+    return (source) => keys.some((key) => sourceKey(source).includes(key)) === only;
 }
 
 function sourceName(sources: Record<string, string>, id: number): string | undefined {

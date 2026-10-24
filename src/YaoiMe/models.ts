@@ -10,6 +10,9 @@ export const STATE_KEYS = {
     CONTENT_RATINGS: "yaoime_content_ratings",
     CONTENT_TYPES: "yaoime_content_types",
     DEDUPE: "yaoime_dedupe_chapters",
+    UPLOAD_SIZE: "yaoime_upload_size",
+    UPLOAD_SOURCES: "yaoime_upload_sources",
+    UPLOAD_SOURCES_ONLY: "yaoime_upload_sources_only",
     HIDDEN_TAGS: "yaoime_hidden_tags",
     OFFICIAL_ONLY: "yaoime_official_only",
     SEAL_KEY: "yaoime_seal_key",
@@ -58,6 +61,7 @@ export const SECTION_OPTIONS: Tag[] = DISCOVER_SECTIONS.map((section) => ({ id: 
 
 // "novel" is left out: the 0.8 reader shows image pages only.
 export const TYPE_OPTIONS: Tag[] = [
+    { id: "doujinshi", title: "Doujinshi" },
     { id: "manga", title: "Manga" },
     { id: "manhwa", title: "Manhwa" },
     { id: "manhua", title: "Manhua" },
@@ -72,11 +76,13 @@ export const CONTENT_RATING_OPTIONS: Tag[] = [
     { id: "pornographic", title: "Pornographic" },
 ];
 
+// The site labels "releasing" as Ongoing; the filter only accepts the value.
 export const STATUS_OPTIONS: Tag[] = [
-    { id: "ongoing", title: "Ongoing" },
+    { id: "releasing", title: "Ongoing" },
     { id: "completed", title: "Completed" },
     { id: "hiatus", title: "Hiatus" },
     { id: "cancelled", title: "Cancelled" },
+    { id: "upcoming", title: "Upcoming" },
 ];
 
 export const DEMOGRAPHIC_OPTIONS: Tag[] = [
@@ -275,6 +281,8 @@ export interface ChapterVariant {
     lang?: string;
     // 1 marks an upload the site counts as a duplicate
     d?: number;
+    // Size in bytes
+    b?: number;
 }
 
 // Groups come newest first in the site's order; an unnumbered extra (numReal 0) follows the
@@ -287,6 +295,15 @@ export interface ChapterGroup {
     extra?: boolean;
     createdAt?: number;
     variants: ChapterVariant[];
+}
+
+export interface ChapterOptions {
+    languages: string[];
+    dedupe: boolean;
+    showSize: boolean;
+    sources: string[];
+    // Show only the listed upload sources instead of hiding them
+    sourcesOnly: boolean;
 }
 
 export interface ReaderPage {

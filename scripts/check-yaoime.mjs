@@ -71,21 +71,32 @@ t('seal key is unmasked from the script', parseSealKey(script), hex(seed));
 
 const group = (label, num, extra = {}) => ({ label, num, numReal: 1, createdAt: 1_700_000_000_000, variants: [{ id: Math.round(num * 10) + 1, s: 1, lang: 'en' }], ...extra });
 const groups = [
-  group('Ch.3', 3, { variants: [{ id: 31, s: 1, lang: 'en' }, { id: 32, s: 2, lang: 'en' }, { id: 33, s: 1, lang: 'es' }] }),
+  group('Ch.3', 3, { variants: [{ id: 31, s: 1, lang: 'en', b: 21_306_384 }, { id: 32, s: 2, lang: 'en' }, { id: 33, s: 1, lang: 'es' }] }),
   group('Creator\'s Note', 70, { numReal: 0, extra: true }),
   group('Ch.2.5', 2.5, { extra: true }),
   group('Ch.2', 2, { vol: 1 }),
   group('Ch.1', 1, { vol: 1, variants: [{ id: 11, s: 1, lang: 'en', d: 1 }, { id: 12, s: 2, lang: 'en' }] }),
 ];
-const page = cheerio.load(`<script>self.__next_f.push([1,${JSON.stringify(JSON.stringify({ groups, sources: { 1: 'alpha', 2: 'beta' } }))}])</script>`);
+const page = cheerio.load(`<script>self.__next_f.push([1,${JSON.stringify(JSON.stringify({ groups, sources: { 1: 'alpha', 2: 'beta2026' } }))}])</script>`);
 const row = c => `${c.sortingIndex}:${c.chapNum}${c.volume ? `v${c.volume}` : ''}:${c.chapterId}:${c.group ?? ''}`;
-t('chapters follow the site order with extras numbered 0', parseChapters(page, {}, ['en'], false).map(row), [
-  '1:1v1:/chapter/1/11:Alpha', '2:1v1:/chapter/2/12:Beta', '3:2v1:/chapter/1/21:Alpha', '4:2.5:/chapter/1/26:Alpha',
-  '5:0:/chapter/1/701:Alpha', '6:3:/chapter/1/31:Alpha', '7:3:/chapter/2/32:Beta',
+const chapters = (options = {}) => parseChapters(page, {}, { languages: ['en'], dedupe: false, showSize: false, sources: [], sourcesOnly: false, ...options });
+t('chapters follow the site order with extras numbered 0', chapters().map(row), [
+  '1:1v1:/chapter/1/11:Alpha', '2:1v1:/chapter/2/12:Beta2026', '3:2v1:/chapter/1/21:Alpha', '4:2.5:/chapter/1/26:Alpha',
+  '5:0:/chapter/1/701:Alpha', '6:3:/chapter/1/31:Alpha', '7:3:/chapter/2/32:Beta2026',
 ]);
-t('dedupe keeps one upload per chapter and skips duplicates', parseChapters(page, {}, ['en'], true).map(row), [
-  '1:1v1:/chapter/2/12:Beta', '2:2v1:/chapter/1/21:Alpha', '3:3:/chapter/1/31:Alpha',
+t('dedupe keeps one upload per chapter and skips duplicates', chapters({ dedupe: true }).map(row), [
+  '1:1v1:/chapter/2/12:Beta2026', '2:2v1:/chapter/1/21:Alpha', '3:3:/chapter/1/31:Alpha',
 ]);
+t('listed upload sources are hidden, matching longer names', chapters({ sources: ['Beta'] }).map(c => c.chapterId),
+  ['/chapter/1/11', '/chapter/1/21', '/chapter/1/26', '/chapter/1/701', '/chapter/1/31']);
+t('only the listed upload sources are shown', chapters({ sources: ['beta 2026'], sourcesOnly: true }).map(c => c.chapterId),
+  ['/chapter/2/12', '/chapter/2/32']);
+t('dedupe picks from the sources left', chapters({ dedupe: true, sources: ['alpha'] }).map(row),
+  ['1:1v1:/chapter/2/12:Beta2026', '2:3:/chapter/2/32:Beta2026']);
+t('upload size is added to the title', chapters({ showSize: true }).filter(c => c.title).map(c => c.title),
+  ["Creator's Note", '21.3 MB']);
+t('hiding every source says so', attempt(() => chapters({ sources: ['alpha', 'beta'] })),
+  'Error: Every upload of this title comes from a source your Upload sources setting hides.');
 
 rmSync(out, { recursive: true, force: true });
 if (fail) {
