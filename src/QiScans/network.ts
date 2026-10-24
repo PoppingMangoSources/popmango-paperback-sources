@@ -81,11 +81,13 @@ async function getJson<T>(url: string): Promise<T> {
         // Validation errors arrive as { message: string[] }
         const message = (parsed as { message?: unknown }).message;
         const reason = Array.isArray(message) ? message.join("; ") : typeof message === "string" ? message : "";
-        throw new Error(
-            response.status === 404
-                ? "Qi Scans no longer lists this title."
-                : `Qi Scans rejected the request (HTTP ${response.status})${reason ? `: ${reason}` : "."}`,
-        );
+        if (response.status === 404) {
+            throw new Error("Qi Scans no longer lists this title.");
+        }
+        if (response.status === 429) {
+            throw new Error("Qi Scans is limiting requests. Wait half a minute and try again.");
+        }
+        throw new Error(`Qi Scans rejected the request (HTTP ${response.status})${reason ? `: ${reason}` : "."}`);
     }
     return parsed as T;
 }

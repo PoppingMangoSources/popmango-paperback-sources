@@ -70,7 +70,7 @@ import {
 export const QiScansInfo = sourceInfo({
     name: "QiScans",
     description: "Extension that pulls manhwa, manhua and manga from qimanga.com.",
-    version: "1.0.0",
+    version: "1.0.1",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DOMAIN,
@@ -102,7 +102,8 @@ export class QiScans extends PopmangoSource {
         super(cheerio, {
             domain: DOMAIN,
             settingsKeys: SETTINGS_KEYS,
-            rateLimit: { numberOfRequests: 5, bufferInterval: 1 },
+            // Pages come from a media host; the API itself allows 60 requests per 30 seconds
+            rateLimit: { numberOfRequests: 10, bufferInterval: 1 },
             interceptor: new QiScansInterceptor(),
         });
     }
