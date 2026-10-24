@@ -5,6 +5,15 @@ The authority is the installed `@paperback/types` **0.8.7**, then the adapter in
 clarify behavior; generated protobuf/Swift devtools files are transport code,
 not additional source capabilities.
 
+In the official toolchain repository, `main` is 0.8 and the default branch `0.9`
+is the TestFlight app's toolchain; clone with `-b main`. `main` adds one change
+after the published 0.8.7: a bundler that shims `Buffer`/`process` into
+bundles. npm never released it, so our bundles have no `Buffer`.
+
+0.8.7 offers twelve settings rows. `common/Menu.ts` wraps select, input, switch,
+label and navigation button; stepper, button, link, secure input, OAuth button,
+header and multiline label need a helper (with `retain`) before use.
+
 ## Source and app methods
 
 | Implement in a source | Native method supplied by `PopmangoSource` |
