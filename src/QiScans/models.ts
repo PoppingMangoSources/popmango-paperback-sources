@@ -13,7 +13,9 @@ export const MIN_QUERY_LENGTH = 2; // Shorter queries are rejected with HTTP 400
 export const MAX_CATALOGUE_PAGES = 5; // Title search with filters scans at most this many filtered pages
 
 export const SHOW_LOCKED_KEY = "qiscans_show_locked";
-export const SETTINGS_KEYS = [SHOW_LOCKED_KEY];
+export const GENRES_KEY = "qiscans_genres";
+export const SETTINGS_KEYS = [SHOW_LOCKED_KEY, GENRES_KEY];
+export const GENRES_MAX_AGE = 24 * 60 * 60 * 1000;
 
 export const SORT_OPTIONS: Tag[] = [
     { id: "latest", title: "Latest updated" },

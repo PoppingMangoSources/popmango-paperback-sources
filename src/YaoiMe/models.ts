@@ -10,6 +10,7 @@ export const STATE_KEYS = {
     CONTENT_RATINGS: "yaoime_content_ratings",
     CONTENT_TYPES: "yaoime_content_types",
     DEDUPE: "yaoime_dedupe_chapters",
+    GENRES: "yaoime_genres",
     UPLOAD_SIZE: "yaoime_upload_size",
     UPLOAD_SOURCES: "yaoime_upload_sources",
     UPLOAD_SOURCES_ONLY: "yaoime_upload_sources_only",
@@ -20,6 +21,7 @@ export const STATE_KEYS = {
 } as const;
 
 export const SETTINGS_KEYS = Object.values(STATE_KEYS);
+export const GENRES_MAX_AGE = 24 * 60 * 60 * 1000;
 
 // The page-list key the reader has shipped with; a deploy that changes it is read from its scripts.
 export const SEAL_KEY = "10dd8dff9911000f9286d3dfd8b9f72b3f763c2f783f89f5c384cff4a11988ac";

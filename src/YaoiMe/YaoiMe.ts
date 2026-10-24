@@ -36,6 +36,7 @@ import {
     DOMAIN,
     FIELDS,
     FILTERS,
+    GENRES_MAX_AGE,
     LANGUAGE_OPTIONS,
     OTHER_OPTIONS,
     SEAL_KEY,
@@ -77,7 +78,7 @@ import {
 export const YaoiMeInfo = sourceInfo({
     name: "YaoiMe",
     description: "Extension that pulls boys' love manga, manhwa and manhua from yaoi.me.",
-    version: "1.0.1",
+    version: "1.0.2",
     icon: "icon.png",
     language: "Multi",
     websiteBaseURL: DOMAIN,
@@ -428,9 +429,12 @@ export class YaoiMe extends PopmangoSource {
         return Application.fetchDocument({ url: `${DOMAIN}${mangaId}`, method: "GET" });
     }
 
+    // Read from the browse page, which is large, so the list is kept for a day
     private getGenres(): Promise<Tag[]> {
-        this.genres ??= Application.fetchDocument({ url: browseUrl({ page: 1, sort: SORT_OPTIONS[0]!.id }), method: "GET" })
-            .then(parseGenres)
+        this.genres ??= this.settings
+            .remembered(STATE_KEYS.GENRES, GENRES_MAX_AGE, () =>
+                Application.fetchDocument({ url: browseUrl({ page: 1, sort: SORT_OPTIONS[0]!.id }), method: "GET" }).then(parseGenres),
+            )
             .catch((error: unknown) => {
                 this.genres = undefined;
                 throw error;

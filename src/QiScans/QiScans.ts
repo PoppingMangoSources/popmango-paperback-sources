@@ -27,6 +27,8 @@ import {
     DISCOVER_SECTIONS,
     DOMAIN,
     FILTERS,
+    GENRES_KEY,
+    GENRES_MAX_AGE,
     MAX_CATALOGUE_PAGES,
     MIN_QUERY_LENGTH,
     PAGE_SIZE,
@@ -70,7 +72,7 @@ import {
 export const QiScansInfo = sourceInfo({
     name: "QiScans",
     description: "Extension that pulls manhwa, manhua and manga from qimanga.com.",
-    version: "1.0.2",
+    version: "1.0.3",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DOMAIN,
@@ -173,7 +175,7 @@ export class QiScans extends PopmangoSource {
 
     // 0.8 has no sort or single-choice control, so each is a tag section; the first pick wins.
     override async getFilterSections(): Promise<TagSection[]> {
-        const genres = await fetchGenres().catch((error: unknown) => {
+        const genres = await this.settings.remembered(GENRES_KEY, GENRES_MAX_AGE, fetchGenres).catch((error: unknown) => {
             if (error instanceof CloudflareError) {
                 throw error;
             }
