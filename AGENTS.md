@@ -44,8 +44,8 @@ or image processing when necessary; do not create one-line wrapper modules or
 service classes for plain requests. Prefer free functions for fetches/parsers;
 use classes where the SDK or shared adapter requires them. Put shared shapes in
 models, avoid `any`, and comment on non-obvious constraints rather than narrating
-code. Preserve existing license notices; new implementation files use the
-repository's GPL-3.0-or-later/Popmango header.
+code. New implementation files use the repository's GPL-3.0-or-later/Popmango
+header.
 
 Before implementing, inspect actual home/search/details/chapter/reader responses
 and record the request, field paths or selectors, pagination signal, and access
