@@ -56,6 +56,20 @@ WebCrypto, timers, Node `Buffer`, filesystem and process APIs out of source
 runtime logic. The bundle scanner checks a limited list of textual patterns;
 passing it is not a complete runtime audit.
 
+## Interceptors and image bytes
+
+| Bridge behavior on a 0.8 device | Consequence |
+| --- | --- |
+| `App.createByteArray(rawData)` is a view over the response's buffer | Decrypt or XOR into it in place; the page changes without a write-back |
+| `App.createRawData(...)` returns `null` and raises "error processing the byteArray" | Never use it; the reader then fails with Kingfisher `dataModifyingFailed` |
+| Only `rawData` is writable on the app's response; the same object must be returned | `common/Interceptor.ts` writes changed fields only (error 303 otherwise) |
+| `interceptRequest` can await native calls and change `url` | Renew short-lived page tokens here (see Kagane) |
+| `interceptResponse` cannot resend or change `status` | A 401 retry is impossible; renew before the request |
+| WebP is decoded by URL extension (reported by another 0.8 source) | Keep `.webp` URLs for WebP; prefer `image/webp` when re-encoding |
+
+Making a network request from inside an interceptor has no device evidence
+yet; keep it to the rare path and report it as unverified.
+
 When reconstructing image bytes, preserve the native response object and
 content type as the existing interceptor does. `App.createPBImage` and
 `App.createPBCanvas` are native 0.8 APIs used by the existing Mangago image

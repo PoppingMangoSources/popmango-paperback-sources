@@ -88,8 +88,16 @@ preserve that distinction and verify reconstructed images on a device.
 - The 0.8 reader returns image `pages`; it does not accept the 0.9 HTML novel
   chapter format. A novel badge alone does not add reader support.
 - When rewriting image bytes, preserve the native response object and set the
-  matching content type, following the existing interceptor. Verify rendering
-  on a device, not only that page URLs are returned.
+  matching content type, following the existing interceptor. Decrypt into
+  `App.createByteArray(response.rawData)` in place, or re-encode with
+  `canvas.encode`; `App.createRawData` returns `null` on 0.8 and the reader
+  drops the page (`check-globals` rejects it). Verify rendering on a device,
+  not only that page URLs are returned.
+- `interceptRequest` may await native calls and rewrite the URL.
+  `interceptResponse` cannot resend a request or change the status, so a
+  short-lived token in a page URL is renewed before the request, not after a 401.
+- Offline stubs of `App.*` must behave like the device, not like the Node
+  polyfills. Show a regression check failing on the old code before trusting it.
 
 ## Commands and completion
 

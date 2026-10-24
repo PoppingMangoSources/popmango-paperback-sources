@@ -102,6 +102,11 @@ shows on screen are the fallback.
   An error in one of them leaves only that screen empty.
 - **A chapter's pages actually render.** A page list that loads is not the same
   as images that draw, particularly for a source that rebuilds its images.
+  "An error occurred while processing the byteArray" or Kingfisher's
+  `dataModifyingFailed` means the interceptor handed back no bytes, usually
+  from `App.createRawData`; it is not a Cloudflare problem.
+- **One chapter of each image format** the site serves (JPEG, WebP, AVIF), and a
+  chapter left open past any page-token lifetime.
 - **Settings open and keep their values** after leaving and coming back.
 - **The version number went up.** The app caches a source by version, so a fix
   shipped under an old number never reaches anyone who already has it.

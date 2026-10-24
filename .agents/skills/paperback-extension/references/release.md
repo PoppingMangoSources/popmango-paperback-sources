@@ -11,6 +11,8 @@
   or a Mana asset folder.
 - Run `npm run verify` and `git diff --check`. Run focused live/device checks
   appropriate to the behavior and say when a check was unavailable.
+- A source that rewrites page bytes ships only after pages rendered on a phone;
+  an offline pass has missed this before.
 - If the source catalog changed, run `npm run readme` and review its generated
   sections. Do not hand-edit source counts or mix unrelated 0.9 catalog changes.
 - Keep `/all`, `/0.8`, `versioning.json`, `source.js`, native metadata and

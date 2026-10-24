@@ -174,6 +174,13 @@ actually changed, and falls back to a copy only when one of them is refused. The
 content type is written after the bytes on its own: a response that refuses the
 type still goes back to the app, carrying the new bytes.
 
+A 0.9 interceptor that returns a fresh `ArrayBuffer` does not port as
+`App.createRawData(...)`: on 0.8 that returns `null` and every page fails with
+"error processing the byteArray". Same-length transforms (AES-CTR, XOR) write
+into `App.createByteArray(response.rawData)`, which is a view over the
+response's own buffer. Anything that changes the size goes through
+`App.createPBImage`/`App.createPBCanvas` and `canvas.encode`, as Mangago does.
+
 **Home page updates.** 0.9 can invalidate the home page after a setting
 changes. 0.8 decides for itself when to rebuild, so
 `Application.invalidateDiscoverSections()` does nothing here and the new

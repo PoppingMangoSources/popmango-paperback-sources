@@ -14,6 +14,8 @@
 // parameter, a parsed cheerio document), so matching them by text produces
 // false positives. The typechecker covers the real globals of that pair, since
 // the DOM library is switched off in tsconfig.
+//
+// Bridge calls that exist but misbehave on a device are listed too, with the reason.
 
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
@@ -40,6 +42,8 @@ const FORBIDDEN = [
   ['sessionStorage', /\bsessionStorage\s*\./g],
   ['window', /\bwindow\s*\./g],
   ['process', /\bprocess\s*\.\s*(?:env|exit|argv|cwd)\b/g],
+  // Returns null on 0.8 and the reader drops the page; write into App.createByteArray(rawData) instead
+  ['App.createRawData', /\bcreateRawData\s*\(/g, 'returns null on 0.8; decrypt into App.createByteArray(rawData) in place'],
 ];
 
 function bufferReferences(file, source) {
@@ -219,9 +223,9 @@ for (const name of readdirSync(directory)) {
   const buffers = bufferReferences(file, source);
   if (buffers) offences.push({ name, global: 'Buffer', count: buffers });
 
-  for (const [global, pattern] of FORBIDDEN) {
+  for (const [global, pattern, reason] of FORBIDDEN) {
     const found = source.match(pattern);
-    if (found) offences.push({ name, global, count: found.length });
+    if (found) offences.push({ name, global, count: found.length, reason });
   }
 }
 
@@ -233,8 +237,8 @@ if (scanned === 0) {
 }
 
 if (offences.length > 0) {
-  for (const { name, global, count } of offences) {
-    console.log(`FAIL  ${name}: uses ${global} (${count}×) — not available on 0.8`);
+  for (const { name, global, count, reason } of offences) {
+    console.log(`FAIL  ${name}: uses ${global} (${count}×) — ${reason ?? 'not available on 0.8'}`);
   }
   console.log(`\n${offences.length} FAILED`);
   process.exit(1);

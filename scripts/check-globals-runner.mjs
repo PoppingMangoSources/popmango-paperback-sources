@@ -99,7 +99,11 @@ try {
     assert.equal(result.status, forbidden ? 1 : 0, code + '\n' + result.stdout + result.stderr);
     assert.match(result.stdout, forbidden ? /FAIL  Fixture: uses Buffer/ : /ok    none/);
   }
-  console.log('Verified free Buffer references, aliases, destructuring, and globalThis access; allowed text, object properties, local bindings and Node-only scripts.');
+  writeFileSync(path.join(root, 'bundles', 'Fixture', 'source.js'), 'response.rawData = App.createRawData({ byteArray: bytes });');
+  const rawData = spawnSync(process.execPath, [runner, '--skip-bundle'], { cwd: root, encoding: 'utf8', timeout: 10_000 });
+  assert.equal(rawData.status, 1, rawData.stdout);
+  assert.match(rawData.stdout, /FAIL  Fixture: uses App\.createRawData .*returns null on 0\.8/);
+  console.log('Verified free Buffer references, aliases, destructuring, and globalThis access; allowed text, object properties, local bindings and Node-only scripts; App.createRawData rejected.');
 } finally {
   rmSync(root, { recursive: true, force: true });
 }
