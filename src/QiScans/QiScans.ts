@@ -72,7 +72,7 @@ import {
 export const QiScansInfo = sourceInfo({
     name: "QiScans",
     description: "Extension that pulls manhwa, manhua and manga from qimanga.com.",
-    version: "1.0.3",
+    version: "1.0.4",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DOMAIN,

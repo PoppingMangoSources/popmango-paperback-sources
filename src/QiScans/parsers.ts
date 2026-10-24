@@ -184,9 +184,14 @@ export function toSourceManga(details: SeriesDetails): SourceManga {
     };
 }
 
-// requiresPurchase is per account, so a chapter the signed-in reader owns comes back false
-export const isLocked = (chapter: { requiresPurchase?: boolean | null; requiresAuth?: boolean | null }): boolean =>
-    chapter.requiresPurchase !== false || chapter.requiresAuth === true;
+const priceOf = (chapter: ChapterItem): number => chapter.discountedPrice ?? chapter.price ?? 0;
+
+// requiresPurchase is per account, so a chapter the signed-in reader owns comes back false.
+// Without the flag the price decides, so a missing field neither hides every chapter nor
+// passes a paid one off as free.
+export const isLocked = (chapter: ChapterItem): boolean =>
+    chapter.requiresAuth === true ||
+    (typeof chapter.requiresPurchase === "boolean" ? chapter.requiresPurchase : priceOf(chapter) > 0);
 
 // Drops titles that only repeat the number ("Chapter 12", "Ch. 12")
 function chapterTitle(chapter: ChapterItem): string | undefined {
@@ -210,8 +215,8 @@ export function toChapters(chapters: ChapterItem[], sourceManga: SourceManga, sh
         .sort((a, b) => a.number - b.number || Date.parse(a.createdAt ?? "") - Date.parse(b.createdAt ?? ""))
         .map((chapter, index) => {
             const name = chapterTitle(chapter);
-            const price = chapter.discountedPrice ?? chapter.price;
-            const lock = typeof price === "number" && price > 0 ? `🔒 ${price} coins` : "🔒 Locked";
+            const price = priceOf(chapter);
+            const lock = price > 0 ? `🔒 ${price} coins` : "🔒 Locked";
             // The site dates a paid chapter by when it became free
             const date = new Date(chapter.becameFreeAt ?? chapter.createdAt ?? "");
             return {
@@ -231,7 +236,9 @@ export function toPages(content: ChapterContent): string[] {
         throw new Error("Qi Scans needs you signed in for this chapter. Sign in on the website through the cloud button.");
     }
     if (content.requiresPurchase === true) {
-        throw new Error("This chapter is paid on Qi Scans. Unlock it on the website, signed in through the cloud button.");
+        const total = content.totalImages;
+        const pages = typeof total === "number" && Number.isInteger(total) && total > 0 ? ` (${total} pages)` : "";
+        throw new Error(`This chapter${pages} is paid on Qi Scans. Unlock it on the website, signed in through the cloud button.`);
     }
     const pages = [...(content.images ?? [])]
         .sort((a, b) => a.order - b.order)

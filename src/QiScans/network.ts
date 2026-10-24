@@ -31,9 +31,14 @@ import {
 
 export class QiScansInterceptor extends PaperbackInterceptor {
     override async interceptRequest(request: InterceptedRequest): Promise<InterceptedRequest> {
+        // Sent the way the website's own pages call the API
+        const api: Record<string, string> = request.url.startsWith(API)
+            ? { "sec-fetch-dest": "empty", "sec-fetch-mode": "cors", "sec-fetch-site": "same-site" }
+            : {};
         return {
             ...request,
             headers: {
+                ...api,
                 ...request.headers,
                 origin: DOMAIN,
                 referer: `${DOMAIN}/`,
@@ -67,7 +72,7 @@ async function getJson<T>(url: string): Promise<T> {
     const [response, body] = await Application.scheduleRequest({
         url,
         method: "GET",
-        headers: { accept: "application/json" },
+        headers: { accept: "application/json, text/plain, */*" },
     });
 
     let parsed: unknown;

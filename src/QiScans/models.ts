@@ -39,8 +39,8 @@ export const STATUS_OPTIONS: Tag[] = [
     { id: "HIATUS", title: "Hiatus" },
     { id: "DROPPED", title: "Dropped" },
     { id: "CANCELLED", title: "Cancelled" },
-    { id: "MASS_RELEASED", title: "Mass released" },
-    { id: "COMING_SOON", title: "Coming soon" },
+    { id: "MASS_RELEASED", title: "Mass Released" },
+    { id: "COMING_SOON", title: "Coming Soon" },
 ];
 
 // The genre list has lowercase and misspelled names; the slug stays as the API expects it.
@@ -164,5 +164,6 @@ export interface ChapterPage {
 export interface ChapterContent {
     requiresPurchase?: boolean | null;
     requiresAuth?: boolean | null;
+    totalImages?: number | null;
     images?: Array<{ url: string; order: number }> | null;
 }
