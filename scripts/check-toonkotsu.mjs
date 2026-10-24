@@ -24,13 +24,13 @@ for (const dir of ['common', 'src/Toonkotsu']) {
   }
 }
 
-// The app hands back plain objects here; createByteArray/createRawData copy, as the bridge does.
+// As on a 0.8 device: createByteArray is a view over the native buffer, and createRawData returns null.
 const raw = bytes => ({ bytes: Uint8Array.from(bytes), get length() { return this.bytes.length; } });
 globalThis.App = {
   createSourceStateManager: () => ({ retrieve: async () => undefined, store: async () => {} }),
   createRequestManager: options => ({ ...options, getDefaultUserAgent: async () => 'UA', schedule: async () => { throw new Error('offline'); } }),
   createRequest: r => ({ ...r }), createCookie: c => c,
-  createByteArray: r => Uint8Array.from(r.bytes), createRawData: ({ byteArray }) => raw(byteArray),
+  createByteArray: r => r.bytes, createRawData: () => null,
 };
 const load = file => require(path.join(out, file));
 const c = load('src/Toonkotsu/crypto.js');

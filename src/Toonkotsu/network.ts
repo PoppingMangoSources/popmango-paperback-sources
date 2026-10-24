@@ -134,9 +134,10 @@ export class ToonkotsuInterceptor extends PaperbackInterceptor {
             throw new Error("Toonkotsu returned an empty page image.");
         }
 
-        let image: Uint8Array;
+        // createByteArray is a view over the response's own buffer, so decrypting into it
+        // rewrites the page. createRawData returns null on 0.8 and the app rejects the page.
         try {
-            image = decryptPage(bytes, decodeBase64Url(page.key), decodeBase64Url(page.nonce).subarray(0, 8));
+            bytes.set(decryptPage(bytes, decodeBase64Url(page.key), decodeBase64Url(page.nonce).subarray(0, 8)));
         } catch (error: unknown) {
             throw new Error(
                 `Could not decrypt page ${page.src}: ${error instanceof Error ? error.message : String(error)}`,
@@ -144,11 +145,7 @@ export class ToonkotsuInterceptor extends PaperbackInterceptor {
         }
 
         // The server labels the ciphertext, so the type is the image's own.
-        return {
-            text: body.text,
-            raw: App.createRawData({ byteArray: image }),
-            contentType: imageType(image) ?? body.contentType,
-        };
+        return { text: body.text, raw: body.raw, contentType: imageType(bytes) ?? body.contentType };
     }
 }
 
