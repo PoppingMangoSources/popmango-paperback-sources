@@ -55,6 +55,19 @@ for (let i = 0; i < 10; i++) await tick();
 t('  writes are queued in order without overlapping', [store.peak, store.writes], [1, ['a', 'b', 'a']]);
 t('  the last write wins', store.values.a, 11);
 
+console.log('\nLists kept across launches:');
+const lists = new SettingsStore(App.createSourceStateManager(), ['list']);
+let loads = 0;
+const load = value => async () => { loads++; return value; };
+t('  the first read loads', await lists.remembered('list', 60_000, load(['a'])), ['a']);
+t('  a fresh copy is reused', [await lists.remembered('list', 60_000, load(['b'])), loads], [['a'], 1]);
+t('  an old copy is refreshed', await lists.remembered('list', 0, load(['c'])), ['c']);
+t('  a failed refresh keeps the old copy', await lists.remembered('list', 0, async () => { throw new Error('offline'); }), ['c']);
+t('  an empty refresh keeps the old copy', [await lists.remembered('list', 0, load([])), await lists.remembered('list', 60_000, load(['d']))], [[], ['c']]);
+const empty = new SettingsStore(App.createSourceStateManager(), ['none']);
+await empty.remembered('none', 60_000, load([]));
+t('  an empty list is not kept', await empty.remembered('none', 60_000, load(['d'])), ['d']);
+
 console.log('\nCurly quotes from iOS autocorrect:');
 t('  single and double quotes become straight', plainQuotes('Boys’ Love “foo”'), 'Boys\' Love "foo"');
 
@@ -90,6 +103,15 @@ t('  the source\'s own requests use the API rate', scheduled, [1]);
 const unpaced = new Fixture([], { rateLimit: { numberOfRequests: 5, bufferInterval: 1 } });
 await Application.scheduleRequest({ url: 'https://api.example.com/b' });
 t('  without one, both share the main manager', [unpaced.requestManager.requestsPerSecond, scheduled[1]], [5, 5]);
+const cleared = [
+  { name: 'cf_clearance', value: 'ok', domain: '.example.com' },
+  { name: 'other_site', value: 'no', domain: 'elsewhere.com' },
+  { name: 'stale', value: 'old', domain: 'example.com', expires: new Date(0) },
+];
+App.createRequestManager = options => ({ ...realManager(options), cookieStore: { getAllCookies: () => cleared } });
+new Fixture([], { apiRateLimit: { numberOfRequests: 1, bufferInterval: 1 } });
+const sent = await Application.requestManager.interceptor.interceptRequest({ url: 'https://api.example.com/x', method: 'GET', headers: {}, cookies: [] });
+t('  the API manager sends the clearance the app saved in the main one', sent.cookies.map(c => `${c.name}=${c.value}`), ['cf_clearance=ok']);
 App.createRequestManager = realManager;
 
 rmSync(out, { recursive: true, force: true });

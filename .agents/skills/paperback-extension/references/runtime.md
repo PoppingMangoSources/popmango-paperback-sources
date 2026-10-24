@@ -142,6 +142,11 @@ supported native image processing and test actual drawing on the app.
 - A source may create several request managers, each with its own
   `requestsPerSecond` and interceptor, for hosts with different limits. Images
   still load through the source's `requestManager`. `HEAD` requests work.
+  Cookie stores are per manager and the app saves a clearance into the main
+  one, so a second manager (`apiRateLimit`) sends the main manager's cookies.
+- Lists a filter screen needs from the site (genres, tags) can be kept for a
+  day with `settings.remembered`, as long-running sources do; an empty or failed
+  refresh keeps the old copy.
 - A tile can carry a placeholder image URL that `interceptRequest` resolves on
   demand, instead of one detail request per tile.
 - When an API's offsets shift between pages, carry the ids already shown in

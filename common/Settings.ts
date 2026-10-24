@@ -107,6 +107,32 @@ export class SettingsStore {
         const value = this.get(key);
         return typeof value === "boolean" ? value : fallback;
     }
+
+    /**
+     * A site list kept across launches, such as genres for the filters, so
+     * opening search does not cost a request each time. A failed refresh
+     * falls back to the old copy. The key must be in `settingsKeys`.
+     */
+    async remembered<T>(key: string, maxAgeMs: number, load: () => Promise<T>): Promise<T> {
+        const stored = this.get(key) as { at?: unknown; value?: unknown } | undefined;
+        const at = typeof stored?.at === "number" ? stored.at : undefined;
+        if (at !== undefined && Date.now() - at < maxAgeMs) {
+            return stored!.value as T;
+        }
+        try {
+            const value = await load();
+            // An empty list is more likely a changed page than a site with nothing in it
+            if (!Array.isArray(value) || value.length > 0) {
+                this.set(key, { at: Date.now(), value });
+            }
+            return value;
+        } catch (error: unknown) {
+            if (at !== undefined) {
+                return stored!.value as T;
+            }
+            throw error;
+        }
+    }
 }
 
 /**
