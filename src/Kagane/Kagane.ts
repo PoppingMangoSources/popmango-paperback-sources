@@ -9,6 +9,7 @@ import {
     ContentRating,
     PopmangoSource,
     inputRow,
+    plainQuotes,
     selectRow,
     sourceInfo,
     switchRow,
@@ -99,7 +100,7 @@ import { HIDDEN_THEMES, POPULAR_TAGS, tagVariants } from "./tags";
 export const KaganeInfo = sourceInfo({
     name: "Kagane",
     description: "Extension that pulls manga, manhwa, manhua and comics from kagane.cx.",
-    version: "5.0.1",
+    version: "5.0.2",
     icon: "icon.png",
     language: "Multi",
     websiteBaseURL: DOMAIN,
@@ -557,7 +558,7 @@ export class Kagane extends PopmangoSource {
 
     // Comma-separated names, "-" to exclude. A name maps to all its case-variant ids.
     private async typedTags(text: string | undefined): Promise<{ included: string[][]; excluded: string[] }> {
-        const names = (text ?? "")
+        const names = plainQuotes(text ?? "")
             .split(",")
             .map((name) => name.trim())
             .filter((name) => name.length > 0);

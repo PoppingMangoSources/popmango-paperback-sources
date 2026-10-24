@@ -84,7 +84,7 @@ import {
 export const ChikariInfo = sourceInfo({
     name: "Chikari",
     description: "Extension that pulls comics from chikari.moe.",
-    version: "1.0.2",
+    version: "1.0.3",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DOMAIN,

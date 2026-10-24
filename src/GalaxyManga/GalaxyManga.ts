@@ -70,7 +70,7 @@ import {
 export const GalaxyMangaInfo = sourceInfo({
     name: "Galaxy Manga",
     description: "Extension that pulls content from galaxymanga.io.",
-    version: "1.0.2",
+    version: "1.0.3",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DOMAIN,

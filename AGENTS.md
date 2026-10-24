@@ -96,6 +96,8 @@ preserve that distinction and verify reconstructed images on a device.
 - `interceptRequest` may await native calls and rewrite the URL.
   `interceptResponse` cannot resend a request or change the status, so a
   short-lived token in a page URL is renewed before the request, not after a 401.
+- Read "Lessons from working 0.8 sources" in the skill's `runtime.md` before
+  touching settings storage, chapter lists, typed text or Cloudflare handling.
 - Offline stubs of `App.*` must behave like the device, not like the Node
   polyfills. Show a regression check failing on the old code before trusting it.
 

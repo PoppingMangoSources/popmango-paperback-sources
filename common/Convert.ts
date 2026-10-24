@@ -23,6 +23,11 @@ import {
 import { homeSectionType } from "./Discover";
 import type { DiscoverSection } from "./Types";
 
+// iOS autocorrect types curly quotes; sites and tag lists use straight ones.
+export function plainQuotes(text: string): string {
+    return text.replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'").replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"');
+}
+
 /**
  * Turns a source's series model into the runtime's.
  *

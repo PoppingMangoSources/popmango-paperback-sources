@@ -10,9 +10,11 @@ is the TestFlight app's toolchain; clone with `-b main`. `main` adds one change
 after the published 0.8.7: a bundler that shims `Buffer`/`process` into
 bundles. npm never released it, so our bundles have no `Buffer`.
 
-0.8.7 offers twelve settings rows. `common/Menu.ts` wraps select, input, switch,
-label and navigation button; stepper, button, link, secure input, OAuth button,
-header and multiline label need a helper (with `retain`) before use.
+0.8.7 offers twelve settings rows and `common/Menu.ts` wraps all of them:
+`selectRow`, `inputRow`, `secureInputRow`, `switchRow`, `stepperRow`,
+`buttonRow`, `linkRow`, `labelRow`, `multilineLabelRow`, `headerRow`,
+`oauthButtonRow` and `formRow` (a nested form). Store secrets typed into a
+secure input in `stateManager.keychain`, not in `settingsKeys`.
 
 ## Source and app methods
 
@@ -101,3 +103,32 @@ content type as the existing interceptor does. `App.createPBImage` and
 `App.createPBCanvas` are native 0.8 APIs used by the existing Mangago image
 processor; browser canvas is a different API and is unavailable. Preserve
 supported native image processing and test actual drawing on the app.
+
+## Lessons from working 0.8 sources
+
+- Parallel state-store calls race in the Swift bridge; `SettingsStore` reads
+  and writes one key at a time. Do the same for any direct `stateManager` use.
+- An empty chapter list makes the app drop the title's reading progress, so
+  `getChapters` throws instead. A source must not swallow a failed list into `[]`.
+- iOS autocorrect types curly quotes. The adapter straightens search text,
+  typed search fields and `inputRow` values; normalize any other user text.
+- `App.create*` objects lose data across the bridge if spread or copied;
+  build each once with its final values.
+- iOS will not follow a redirect onto plain `http`; request the final `https`
+  URL directly.
+- The device's `Date` parses ISO and RFC dates only; use `common/Dates.ts` for
+  relative or localized dates.
+- A clearance cookie is tied to the User-Agent it was issued with: the bypass
+  request and every later request must send the same one. Paperback uses
+  Apple's network stack, so a non-Apple User-Agent can be refused.
+- Fetch paged chapter lists one page at a time; a `Promise.all` burst trips
+  site rate limits. Where `rateLimit` is not enough, queue calls one in flight.
+- Rebuild filter and settings objects on every call; do not cache SDK objects.
+- Sorting exact title matches first in search makes migration from another
+  source easier.
+- Another 0.8 source reports that calling `sectionCallback` before a row has
+  items "breaks the UI". Our adapter does exactly that and home pages load on
+  devices; change it only with a device test.
+- Never `eval` or `new Function` site scripts; parse them as text.
+- Pure-JS npm packages (for example `html-entities`) bundle fine; anything
+  needing Node built-ins does not, because the published 0.8.7 bundler adds no shims.

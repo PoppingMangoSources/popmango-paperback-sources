@@ -68,7 +68,7 @@ import {
 export const BunMangaInfo = sourceInfo({
     name: "BunManga",
     description: "Extension that pulls content from bunmanga.com.",
-    version: "1.0.1",
+    version: "1.0.2",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DOMAIN,

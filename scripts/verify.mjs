@@ -16,7 +16,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const run = (...command) => execFileSync(process.execPath, command, { cwd: root, stdio: 'inherit' });
 
 run('node_modules/typescript/bin/tsc', '--noEmit');
-for (const check of ['runtime', 'aes', 'mangago', 'toonkotsu', 'kagane', 'xcomic', 'xcomic-flow', 'selectors', 'globals-runner', 'live-runner', 'tooling']) {
+for (const check of ['runtime', 'aes', 'mangago', 'toonkotsu', 'kagane', 'menu', 'common', 'xcomic', 'xcomic-flow', 'selectors', 'globals-runner', 'live-runner', 'tooling']) {
   run(`scripts/check-${check}.mjs`);
 }
 const target = folder ? [`--folder=${folder}`] : [];

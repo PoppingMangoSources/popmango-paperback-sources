@@ -24,6 +24,7 @@ import type {
 
 import { CloudflareError } from "./Cloudflare";
 import {
+    plainQuotes,
     toChapter,
     toChapterDetails,
     toHomeSection,
@@ -260,6 +261,10 @@ export abstract class PopmangoSource
             this.lastManga = manga;
 
             const chapters = await this.getChapterList(manga);
+            // An empty list makes the app drop the title's reading progress
+            if (chapters.length === 0) {
+                throw new Error("No chapters were found. Reading progress is kept; try again later.");
+            }
 
             this.lastChapters = new Map(chapters.map((chapter) => [chapter.chapterId, chapter]));
             return chapters.map(toChapter);
@@ -298,10 +303,15 @@ export abstract class PopmangoSource
         return this.guard(async () => {
             const page = await this.getSearchResultItems(
                 {
-                    title: query.title?.trim() === "" ? undefined : query.title,
+                    title: query.title?.trim() ? plainQuotes(query.title) : undefined,
                     includedTags: query.includedTags.map((tag) => ({ id: tag.id, title: tag.label })),
                     excludedTags: query.excludedTags.map((tag) => ({ id: tag.id, title: tag.label })),
-                    parameters: query.parameters ?? {},
+                    parameters: Object.fromEntries(
+                        Object.entries(query.parameters ?? {}).map(([key, value]) => [
+                            key,
+                            typeof value === "string" ? plainQuotes(value) : value,
+                        ]),
+                    ),
                 },
                 metadata,
             );

@@ -20,6 +20,7 @@ export class SettingsStore {
     private readonly keys: readonly string[];
     private readonly cache = new Map<string, unknown>();
     private hydration?: Promise<void>;
+    private writes: Promise<void> = Promise.resolve();
 
     constructor(stateManager: SourceStateManager, keys: readonly string[]) {
         this.stateManager = stateManager;
@@ -36,22 +37,21 @@ export class SettingsStore {
         return (this.hydration ??= this.hydrate());
     }
 
+    // One key at a time: parallel state-store calls race in the Swift bridge.
     private async hydrate(): Promise<void> {
-        await Promise.all(
-            this.keys.map(async (key) => {
-                try {
-                    const value = await this.stateManager.retrieve(key);
-                    // A value written this session wins over what was on disk.
-                    // Without this a setting changed while the load was still
-                    // in flight would appear to take and then revert.
-                    if (value !== null && value !== undefined && !this.cache.has(key)) {
-                        this.cache.set(key, value);
-                    }
-                } catch {
-                    // An unreadable key just falls back to its default.
+        for (const key of this.keys) {
+            try {
+                const value = await this.stateManager.retrieve(key);
+                // A value written this session wins over what was on disk.
+                // Without this a setting changed while the load was still
+                // in flight would appear to take and then revert.
+                if (value !== null && value !== undefined && !this.cache.has(key)) {
+                    this.cache.set(key, value);
                 }
-            }),
-        );
+            } catch {
+                // An unreadable key just falls back to its default.
+            }
+        }
     }
 
     /** The raw stored value, or `undefined` when nothing is set. */
@@ -62,7 +62,8 @@ export class SettingsStore {
     /** Stores a value, taking effect immediately and persisting behind. */
     set(key: string, value: unknown): void {
         this.cache.set(key, value);
-        void this.persist(key, value);
+        // Queued behind earlier writes for the same reason the load is sequential
+        this.writes = this.writes.then(() => this.persist(key, value));
     }
 
     private async persist(key: string, value: unknown): Promise<void> {

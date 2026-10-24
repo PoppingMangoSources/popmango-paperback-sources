@@ -10,6 +10,7 @@
 
 export { CloudflareError, headerValue, isCloudflareChallenge } from "./Cloudflare";
 export { parseChapterNumber, parseDate } from "./Dates";
+export { plainQuotes } from "./Convert";
 export { DiscoverSectionType } from "./Types";
 export { Capability, SourceKind, sourceInfo, type SourceDescription } from "./Info";
 export {
@@ -20,7 +21,22 @@ export {
 export { Application, assertOk, type RequestInit, type ResponseBody } from "./Runtime";
 export { PopmangoSource, type SourceOptions } from "./Source";
 export { SettingsStore, normaliseUrlOverride } from "./Settings";
-export { inputRow, labelRow, selectRow, settingsMenu, switchRow, type MenuSection } from "./Menu";
+export {
+    buttonRow,
+    formRow,
+    headerRow,
+    inputRow,
+    labelRow,
+    linkRow,
+    multilineLabelRow,
+    oauthButtonRow,
+    secureInputRow,
+    selectRow,
+    settingsMenu,
+    stepperRow,
+    switchRow,
+    type MenuSection,
+} from "./Menu";
 export { URL, UrlBuilder, hostOf, originOf, resolveUrl } from "./UrlBuilder";
 export {
     ContentRating,
