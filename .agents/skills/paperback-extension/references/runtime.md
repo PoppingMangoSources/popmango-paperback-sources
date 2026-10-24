@@ -78,8 +78,10 @@ passing it is not a complete runtime audit.
 | `interceptResponse` cannot resend or change `status` | A 401 retry is impossible; renew before the request |
 | WebP is decoded by URL extension (reported by another 0.8 source) | Keep `.webp` URLs for WebP; prefer `image/webp` when re-encoding |
 
-Making a network request from inside an interceptor has no device evidence
-yet; keep it to the rare path and report it as unverified.
+Shipped 0.8 sources make network requests from inside `interceptRequest`
+through the same request manager: MangaDex refreshes its login token there,
+and MangaPlus resolves placeholder thumbnail URLs. Keep such requests to the
+rare path and make sure they cannot match the condition that triggers them.
 
 The 0.8.7 Node polyfill's `createByteArray` copies and its `createRawData`
 returns an object, so Node passes code that fails on a phone.
@@ -126,9 +128,23 @@ supported native image processing and test actual drawing on the app.
 - Rebuild filter and settings objects on every call; do not cache SDK objects.
 - Sorting exact title matches first in search makes migration from another
   source easier.
-- Another 0.8 source reports that calling `sectionCallback` before a row has
-  items "breaks the UI". Our adapter does exactly that and home pages load on
-  devices; change it only with a device test.
+- Calling `sectionCallback` with an empty row and again with the same object
+  once it has items is what MangaDex does and what our adapter does. One other
+  source reports it "breaks the UI"; change it only with a device test.
 - Never `eval` or `new Function` site scripts; parse them as text.
 - Pure-JS npm packages (for example `html-entities`) bundle fine; anything
   needing Node built-ins does not, because the published 0.8.7 bundler adds no shims.
+- A `#fragment` on a page URL is still on `response.request.url` in
+  `interceptResponse`; MangaPlus carries each page's XOR key that way and
+  decrypts in place through `App.createByteArray`.
+- A source may create several request managers, each with its own
+  `requestsPerSecond` and interceptor, for hosts with different limits. Images
+  still load through the source's `requestManager`. `HEAD` requests work.
+- A tile can carry a placeholder image URL that `interceptRequest` resolves on
+  demand, instead of one detail request per tile.
+- When an API's offsets shift between pages, carry the ids already shown in
+  the paging metadata and drop repeats.
+- Store login tokens in `stateManager.keychain`.
+- `eval` exists on the device, but site scripts are still parsed, not run.
+- Another repository taking over a source ID at a higher version reports the
+  app may list both copies; tell readers which repository to update from.
