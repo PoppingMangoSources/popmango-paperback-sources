@@ -17,6 +17,8 @@ import {
 
 import {
     API,
+    API_HOST,
+    API_V2,
     DOMAIN,
     LATEST_PAGE_SIZE,
     PAGE_SIZE,
@@ -32,7 +34,7 @@ import {
 export class QiScansInterceptor extends PaperbackInterceptor {
     override async interceptRequest(request: InterceptedRequest): Promise<InterceptedRequest> {
         // Sent the way the website's own pages call the API
-        const api: Record<string, string> = request.url.startsWith(API)
+        const api: Record<string, string> = request.url.startsWith(API_HOST)
             ? { "sec-fetch-dest": "empty", "sec-fetch-mode": "cors", "sec-fetch-site": "same-site" }
             : {};
         return {
@@ -149,22 +151,25 @@ export function fetchSeries(slug: string): Promise<SeriesDetails> {
 // One page at a time: a burst of parallel pages trips the site's rate limit.
 export async function fetchAllChapters(slug: string): Promise<ChapterItem[]> {
     const chapters: ChapterItem[] = [];
-    let page = 1;
+    const seen = new Set<string>();
+    let cursor: string | undefined;
     for (;;) {
-        const result = await getJson<ChapterPage>(
-            series()
-                .addPathComponent(slug)
-                .addPathComponent("chapters")
-                .setQueryItem("page", page)
-                .setQueryItem("perPage", PAGE_SIZE)
-                .setQueryItem("sort", "desc")
-                .build(),
-        );
+        const url = URL(API_V2)
+            .addPathComponent("series")
+            .addPathComponent(slug)
+            .addPathComponent("chapters")
+            .setQueryItem("limit", PAGE_SIZE)
+            .setQueryItem("sort", "desc");
+        if (cursor !== undefined) url.setQueryItem("cursor", cursor);
+        const result = await getJson<ChapterPage>(url.build());
         chapters.push(...(result.data ?? []));
-        if (result.next === null || result.next <= page || page >= result.totalPages) {
+        const next = result.nextCursor ?? undefined;
+        // A repeated cursor would loop forever
+        if (result.hasMore !== true || next === undefined || seen.has(next)) {
             return chapters;
         }
-        page = result.next;
+        seen.add(next);
+        cursor = next;
     }
 }
 

@@ -21,13 +21,25 @@ for (const dir of ['common', 'src/QiScans']) {
   }
 }
 
+// The v2 chapter list pages by cursor; the second page repeats its cursor, as a broken API might.
+const asked = [];
+const pages = {
+  '': { data: [{ slug: 'chapter-3' }, { slug: 'chapter-2' }], hasMore: true, nextCursor: 'c1' },
+  c1: { data: [{ slug: 'chapter-1' }], hasMore: true, nextCursor: 'c1' },
+};
+const reply = async request => {
+  const url = new URL(request.url);
+  asked.push(`${url.pathname}?${url.searchParams}`);
+  return { status: 200, headers: {}, data: JSON.stringify(pages[url.searchParams.get('cursor') ?? '']) };
+};
 globalThis.App = {
   createSourceStateManager: () => ({ retrieve: async () => undefined, store: async () => {} }),
-  createRequestManager: options => ({ ...options, getDefaultUserAgent: async () => 'UA', schedule: async () => { throw new Error('offline'); } }),
+  createRequestManager: options => ({ ...options, getDefaultUserAgent: async () => 'UA', schedule: async request => reply(request) }),
   createRequest: r => ({ ...r }), createCookie: c => c,
 };
 const load = file => require(path.join(out, file));
 const { isLocked, toChapters, toPages } = load('src/QiScans/parsers.js');
+const { fetchAllChapters } = load('src/QiScans/network.js');
 new (load('src/QiScans/QiScans.js').QiScans)(require('cheerio'));
 
 let fail = 0;
@@ -58,6 +70,12 @@ t('a paid page list names its length', attempt(() => toPages({ requiresPurchase:
 t('an unknown length is left out', attempt(() => toPages({ requiresPurchase: true, totalImages: 0, images: [] })),
   'Error: This chapter is paid on Qi Scans. Unlock it on the website, signed in through the cloud button.');
 t('pages come back in order', toPages({ images: [{ url: 'b', order: 2 }, { url: 'a', order: 1 }] }), ['a', 'b']);
+
+const all = await fetchAllChapters('series-a');
+t('the chapter list follows the cursor and stops on a repeat', [all.map(c => c.slug), asked], [
+  ['chapter-3', 'chapter-2', 'chapter-1'],
+  ['/api/v2/series/series-a/chapters?limit=100&sort=desc', '/api/v2/series/series-a/chapters?limit=100&sort=desc&cursor=c1'],
+]);
 
 rmSync(out, { recursive: true, force: true });
 if (fail) {

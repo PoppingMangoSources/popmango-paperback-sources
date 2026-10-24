@@ -4,7 +4,10 @@
 import { DiscoverSectionType, type DiscoverSection, type Tag } from "../../common";
 
 export const DOMAIN = "https://qimanga.com";
-export const API = "https://api.qimanga.com/api/v1";
+export const API_HOST = "https://api.qimanga.com";
+export const API = `${API_HOST}/api/v1`;
+// The website reads chapter lists from v2, which pages by cursor
+export const API_V2 = `${API_HOST}/api/v2`;
 export const FALLBACK_COVER = `${DOMAIN}/qiscans.ico`;
 
 export const PAGE_SIZE = 100; // The API's maximum, for every paged list
@@ -157,8 +160,8 @@ export interface ChapterItem {
 
 export interface ChapterPage {
     data: ChapterItem[];
-    totalPages: number;
-    next: number | null;
+    hasMore?: boolean;
+    nextCursor?: string | null;
 }
 
 export interface ChapterContent {
