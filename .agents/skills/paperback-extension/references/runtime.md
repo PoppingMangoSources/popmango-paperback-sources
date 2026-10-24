@@ -70,6 +70,23 @@ passing it is not a complete runtime audit.
 Making a network request from inside an interceptor has no device evidence
 yet; keep it to the rare path and report it as unverified.
 
+The 0.8.7 Node polyfill's `createByteArray` copies and its `createRawData`
+returns an object, so Node passes code that fails on a phone.
+
+## Other bridge facts
+
+- `requestManager.cookieStore` (`getAllCookies`, `addCookie`, `removeCookie`)
+  is the app's own cookie jar, the one the Cloudflare web view writes.
+  `stateManager.keychain` is secure storage for credentials.
+- When a site challenges only chapter pages, point
+  `getCloudflareBypassRequestAsync` at a real chapter URL, not the home page.
+- The app runs a library refresh as one `getChapters` per title; keep it to
+  one or two requests and rely on `rateLimit`, or sites ban the reader's IP.
+  Long request chains in one call fail with `AsyncOperationTimedOutError`.
+- The newer Paperback app runs 0.8 sources through a compatibility layer that
+  skips `interceptResponse` and shows select rows as "Unsupported 0.8 Row".
+  These sources target the 0.8 app; report the newer app as unsupported.
+
 When reconstructing image bytes, preserve the native response object and
 content type as the existing interceptor does. `App.createPBImage` and
 `App.createPBCanvas` are native 0.8 APIs used by the existing Mangago image

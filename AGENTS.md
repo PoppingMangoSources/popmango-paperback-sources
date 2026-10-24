@@ -130,7 +130,9 @@ chapter were exercised. A blocked site, unavailable device, or unsupported
 devtools connection is unverified, not a pass. Node polyfills cannot prove Swift
 bridge behavior, settings retention, chapter grouping, or image rendering.
 
-New sources start at `1.0.0`. Bump the existing source's patch version when its
+New sources start at `1.0.0`, unless they take over a source ID another 0.8 repository
+already ships with identical manga and chapter IDs: then start one patch above
+its version (Kagane is `5.0.1` over a `5.0.0` build) so installs update in place. Bump the existing source's patch version when its
 shipped behavior changes. A shared behavior change needs bumps for the affected
 sources; docs and development tooling alone do not. Refresh the README using
 `npm run readme` when the published catalog changes and inspect its diff.

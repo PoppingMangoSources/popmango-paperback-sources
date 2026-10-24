@@ -4,6 +4,8 @@
   and contributor authorship; do not force-update a shared branch unexpectedly.
 - For shipped source changes, increment the source version in `<Name>Info`.
   New sources start at `1.0.0`; existing fixes normally increment the patch.
+  A source replacing another repository's build of the same ID starts above
+  that build's version, and only when its manga and chapter IDs are identical.
   Determine which source bundles a shared-runtime change affects and bump
   those. Documentation and repository-tooling changes alone need no source bump.
 - Keep saved source/manga/chapter IDs stable. Add the real site icon under

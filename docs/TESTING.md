@@ -113,5 +113,15 @@ shows on screen are the fallback.
 - **Cold-start chapter access**, volume restarts, decimal numbers, alternate
   upload groups, search exclusions, and the affected setting's persisted value.
 
+## Reading app errors
+
+| Message on the phone | Meaning |
+| --- | --- |
+| `JSError Error [PaperbackError(300)] <message>` | The source threw; the message after it is the real error |
+| "error processing the byteArray" / Kingfisher `dataModifyingFailed` | The interceptor handed back no image bytes (`App.createRawData`) |
+| `AsyncOperationTimedOutError` | One source call took too long; too many sequential requests |
+| "Duplicate title ids detected, please run database repair" | App database issue; the reader runs repair in settings |
+| "Unsupported 0.8 Row" in settings | The reader is on the newer app's 0.8 compatibility layer |
+
 Report offline, live, and device results separately with the source version,
 Paperback app build, device OS and public title/chapter used. State any gaps.

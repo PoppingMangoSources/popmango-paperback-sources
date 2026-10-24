@@ -99,7 +99,7 @@ import { HIDDEN_THEMES, POPULAR_TAGS, tagVariants } from "./tags";
 export const KaganeInfo = sourceInfo({
     name: "Kagane",
     description: "Extension that pulls manga, manhwa, manhua and comics from kagane.cx.",
-    version: "1.0.0",
+    version: "5.0.1",
     icon: "icon.png",
     language: "Multi",
     websiteBaseURL: DOMAIN,
