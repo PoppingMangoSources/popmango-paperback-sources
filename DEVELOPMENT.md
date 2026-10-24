@@ -44,7 +44,9 @@ protection.
 ## Maintenance choices
 
 The repo-local skill uses `.agents/skills/paperback-extension`; the matching
-`.claude/skills` path is a symlink so both tools read one copy. Keep detailed
+`.claude/skills` path is a symlink so both tools read one copy. The skill's
+`agents/openai.yaml` and `.claude/agents/paperback-extension.md` carry the same
+name, description and default task for each tool. Keep detailed
 runtime facts and release steps in its references rather than duplicating them
 in `CLAUDE.md`.
 
