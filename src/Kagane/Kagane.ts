@@ -94,11 +94,12 @@ import {
     toSourceManga,
     type ViewOptions,
 } from "./parsers";
+import { HIDDEN_TAG_GROUPS, POPULAR_TAGS, tagVariants } from "./tags";
 
 export const KaganeInfo = sourceInfo({
     name: "Kagane",
     description: "Extension that pulls manga, manhwa, manhua and comics from kagane.cx.",
-    version: "1.0.0",
+    version: "1.0.1",
     icon: "icon.png",
     language: "Multi",
     websiteBaseURL: DOMAIN,
@@ -194,6 +195,13 @@ export class Kagane extends PopmangoSource {
                               }),
                           ]
                         : []),
+                    selectRow("hidden_tag_groups", {
+                        label: "Hidden themes",
+                        options: HIDDEN_TAG_GROUPS.map((group) => ({ id: group.id, title: group.title })),
+                        multiple: true,
+                        get: () => this.settings.stringArray(STATE_KEYS.HIDDEN_TAG_GROUPS),
+                        set: (value) => this.settings.set(STATE_KEYS.HIDDEN_TAG_GROUPS, value),
+                    }),
                     // There are nearly ten thousand tags, far too many to pick from.
                     inputRow("hidden_tags", {
                         label: "Hidden tags (comma separated)",
@@ -314,8 +322,13 @@ export class Kagane extends PopmangoSource {
         }
 
         sections.push(
+            {
+                id: TAG_SECTION,
+                title: "Popular tags",
+                tags: POPULAR_TAGS.map(([title, ids]) => filterTag(TAG_SECTION, ids[0] ?? "", title)),
+            },
             section(FILTERS.GENRE_MATCH, "Chosen genres", MATCH_OPTIONS),
-            section(FILTERS.TAG_MATCH, "Typed tags", MATCH_OPTIONS),
+            section(FILTERS.TAG_MATCH, "Chosen tags", MATCH_OPTIONS),
             section(FILTERS.FORMAT, "Format", FORMAT_OPTIONS),
             section(FILTERS.STATUS, "Upload status", STATUS_OPTIONS),
             section(FILTERS.PUBLICATION, "Publication status", STATUS_OPTIONS),
@@ -330,7 +343,11 @@ export class Kagane extends PopmangoSource {
                     "Upload source",
                     [...sources]
                         .sort((left, right) => left.title.localeCompare(right.title))
-                        .map((source) => ({ id: source.source_id, title: source.title })),
+                        .map((source) => ({
+                            id: source.source_id,
+                            // A star marks official publishers among the scanlators.
+                            title: source.source_type === "Official" ? `${source.title} ⭐` : source.title,
+                        })),
                 ),
             );
         }
@@ -368,11 +385,11 @@ export class Kagane extends PopmangoSource {
         const chosenRatings = (included.get(FILTERS.RATING) ?? []).filter(isRating);
         const ratings = chosenRatings.length > 0 ? chosenRatings : this.contentRatings;
 
-        // A typed tag can name several site ids; tapping a tag on a details
-        // page names exactly one.
+        // A typed or popular tag can name several site ids; one tapped on a
+        // details page names exactly one.
         const typed = await this.typedTags(textField(query, FIELDS.TAGS));
         const tappedTags = included.get(TAG_SECTION) ?? [];
-        const tagGroups = [...typed.included, ...tappedTags.map((id) => [id])];
+        const tagGroups = [...typed.included, ...tappedTags.map(tagVariants)];
         const tagsMatchAll = first(FILTERS.TAG_MATCH) !== "any";
 
         const options = await this.searchOptions({
@@ -392,7 +409,7 @@ export class Kagane extends PopmangoSource {
             },
             tags: {
                 included: tagGroups,
-                excluded: [...typed.excluded, ...(excluded.get(TAG_SECTION) ?? [])],
+                excluded: [...typed.excluded, ...(excluded.get(TAG_SECTION) ?? []).flatMap(tagVariants)],
                 matchAll: tagsMatchAll,
             },
             staffId: await this.resolved("staff", textField(query, FIELDS.STAFF)),
@@ -539,7 +556,7 @@ export class Kagane extends PopmangoSource {
     private async searchOptions(chosen: Partial<SearchOptions>): Promise<SearchOptions> {
         const browsing = !chosen.query;
         const hiddenGenres = browsing ? this.settings.stringArray(STATE_KEYS.EXCLUDED_GENRES) : [];
-        const hiddenTags = browsing ? (await this.typedTags(this.settings.string(STATE_KEYS.HIDDEN_TAGS, ""))).included.flat() : [];
+        const hiddenTags = browsing ? await this.hiddenTagIds() : [];
 
         const genres = chosen.genres ?? { included: [], excluded: [], matchAll: true };
         const tags = chosen.tags ?? { included: [], excluded: [], matchAll: true };
@@ -602,6 +619,13 @@ export class Kagane extends PopmangoSource {
         return { included, excluded };
     }
 
+    /** The ids of every typed hidden tag and every tag of a hidden theme. */
+    private async hiddenTagIds(): Promise<string[]> {
+        const themes = new Set(this.settings.stringArray(STATE_KEYS.HIDDEN_TAG_GROUPS));
+        const typed = (await this.typedTags(this.settings.string(STATE_KEYS.HIDDEN_TAGS, ""))).included.flat();
+        return [...typed, ...HIDDEN_TAG_GROUPS.filter((group) => themes.has(group.id)).flatMap((group) => group.tagIds)];
+    }
+
     private async resolved(kind: "staff" | "groups", name: string | undefined): Promise<string | undefined> {
         return name !== undefined ? resolveName(this.site, kind, name) : undefined;
     }
@@ -620,9 +644,7 @@ export class Kagane extends PopmangoSource {
 
         const languages = this.languages;
         const hiddenGenres = new Set(this.settings.stringArray(STATE_KEYS.EXCLUDED_GENRES));
-        const hiddenTags = new Set(
-            (await this.typedTags(this.settings.string(STATE_KEYS.HIDDEN_TAGS, ""))).included.flat(),
-        );
+        const hiddenTags = new Set(await this.hiddenTagIds());
 
         const chart = await fetchTrending(this.site, {
             limit: TRENDING_SIZE,

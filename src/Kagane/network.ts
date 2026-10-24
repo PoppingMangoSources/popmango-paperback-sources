@@ -350,8 +350,14 @@ export function fetchBookIndex(site: string, seriesId: string): Promise<BookInde
  *
  * Tiles take the compressed copy: the full image runs to over a megabyte,
  * twenty times the size, and a home page shows well over a hundred covers.
+ *
+ * A series without a cover gets an address that fails to load: the app then
+ * draws its own placeholder, where an empty address blanks the whole row.
  */
-export function coverUrl(site: string, imageId: string, full = false): string {
+export function coverUrl(site: string, imageId: string | undefined, full = false): string {
+    if (!imageId) {
+        return URL(site).addPathComponent("image").addPathComponent("none.webp").build();
+    }
     const url = URL(api(site)).addPathComponent("image").addPathComponent(imageId);
     if (!full) {
         url.addPathComponent("compressed");

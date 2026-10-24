@@ -37,7 +37,7 @@ export const MAX_IDS = 50;
 /**
  * Raw pages walked for one result page when tags must be checked locally.
  *
- * That only happens when a typed tag has several site ids; see `KaganeTags`.
+ * That only happens when a chosen tag has several site ids; see `Kagane.getSearchResultItems`.
  */
 export const MAX_FILTER_PAGES = 10;
 
@@ -49,6 +49,7 @@ export const STATE_KEYS = {
     HIDE_DISTURBING: "kagane_hide_disturbing",
     EXCLUDED_GENRES: "kagane_excluded_genres",
     HIDDEN_TAGS: "kagane_hidden_tags",
+    HIDDEN_TAG_GROUPS: "kagane_hidden_tag_groups",
     SHOW_SOURCE_IN_TITLE: "kagane_show_source_in_title",
     SHOW_SPOILER_TAGS: "kagane_show_spoiler_tags",
     VISIBLE_SECTIONS: "kagane_visible_sections",
@@ -133,6 +134,7 @@ export const STATUS_OPTIONS: Tag[] = [
  */
 export const SORT_OPTIONS: Tag[] = [
     { id: "", title: "Relevance" },
+    { id: "avg_views_today", title: "Most read today" },
     { id: "avg_views_week", title: "Most read this week" },
     { id: "popular_now", title: "Popular now" },
     { id: "avg_views_month", title: "Most read this month" },

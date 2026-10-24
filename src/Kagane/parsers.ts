@@ -28,7 +28,7 @@ import {
 /** What changes how a title is shown, rather than which titles are. */
 export interface ViewOptions {
     /** Builds a cover address from its image id; tiles and details differ. */
-    cover: (imageId: string, full?: boolean) => string;
+    cover: (imageId: string | undefined, full?: boolean) => string;
     /** Upload source names by id, when titles should carry them. */
     sourceNames?: Map<string, string>;
     showSpoilerTags: boolean;
@@ -117,7 +117,7 @@ function latestDate(chapter: LatestChapter): Date | undefined {
 // ---------------------------------------------------------------------------
 
 function tileCover(series: SeriesSummary, view: ViewOptions): string {
-    return series.cover_image_id ? view.cover(series.cover_image_id) : "";
+    return view.cover(series.cover_image_id ?? undefined);
 }
 
 export function toSearchResult(series: SeriesSummary, view: ViewOptions): SearchResultItem {
@@ -241,7 +241,7 @@ export function toSourceManga(seriesId: string, details: SeriesDetails, view: Vi
         mangaInfo: {
             primaryTitle,
             secondaryTitles,
-            thumbnailUrl: coverId ? view.cover(coverId, true) : "",
+            thumbnailUrl: view.cover(coverId ?? undefined, true),
             synopsis: (details.description ?? "").replace(/\r/g, "").trim(),
             author: authors.join(", ") || undefined,
             artist: artists.join(", ") || undefined,
