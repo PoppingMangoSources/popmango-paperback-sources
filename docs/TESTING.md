@@ -102,11 +102,26 @@ shows on screen are the fallback.
   An error in one of them leaves only that screen empty.
 - **A chapter's pages actually render.** A page list that loads is not the same
   as images that draw, particularly for a source that rebuilds its images.
+  "An error occurred while processing the byteArray" or Kingfisher's
+  `dataModifyingFailed` means the interceptor handed back no bytes, usually
+  from `App.createRawData`; it is not a Cloudflare problem.
+- **One chapter of each image format** the site serves (JPEG, WebP, AVIF), and a
+  chapter left open past any page-token lifetime.
 - **Settings open and keep their values** after leaving and coming back.
 - **The version number went up.** The app caches a source by version, so a fix
   shipped under an old number never reaches anyone who already has it.
 - **Cold-start chapter access**, volume restarts, decimal numbers, alternate
   upload groups, search exclusions, and the affected setting's persisted value.
+
+## Reading app errors
+
+| Message on the phone | Meaning |
+| --- | --- |
+| `JSError Error [PaperbackError(300)] <message>` | The source threw; the message after it is the real error |
+| "error processing the byteArray" / Kingfisher `dataModifyingFailed` | The interceptor handed back no image bytes (`App.createRawData`) |
+| `AsyncOperationTimedOutError` | One source call took too long; too many sequential requests |
+| "Duplicate title ids detected, please run database repair" | App database issue; the reader runs repair in settings |
+| "Unsupported 0.8 Row" in settings | The reader is on the newer app's 0.8 compatibility layer |
 
 Report offline, live, and device results separately with the source version,
 Paperback app build, device OS and public title/chapter used. State any gaps.

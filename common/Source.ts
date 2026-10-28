@@ -8,6 +8,7 @@ import type {
     ChapterDetails as RuntimeChapterDetails,
     ChapterProviding,
     CloudflareBypassRequestProviding,
+    Cookie,
     HomePageSectionsProviding,
     HomeSection,
     PagedResults as RuntimePagedResults,
@@ -24,6 +25,7 @@ import type {
 
 import { CloudflareError } from "./Cloudflare";
 import {
+    plainQuotes,
     toChapter,
     toChapterDetails,
     toHomeSection,
@@ -76,6 +78,15 @@ export interface SourceOptions {
      * request, so page images are spaced out along with everything else.
      */
     rateLimit?: { numberOfRequests: number; bufferInterval: number; ignoreImages?: boolean };
+    /**
+     * A slower limit for the source's own requests, for a site whose API
+     * allows far fewer than its image host serves.
+     *
+     * The app loads page images through `requestManager`, which keeps
+     * `rateLimit`; the source's own requests go through a second manager with
+     * this one, so reading is not slowed to the API's pace.
+     */
+    apiRateLimit?: { numberOfRequests: number; bufferInterval: number };
     /** The source's own interceptor, if it needs one. */
     interceptor?: PaperbackInterceptor;
     /** Seconds before a request is abandoned. */
@@ -138,18 +149,29 @@ export abstract class PopmangoSource
         this.cookieStorage = new CookieStorageInterceptor(this.stateManager);
         this.settings = new SettingsStore(this.stateManager, options.settingsKeys ?? []);
 
-        this.requestManager = App.createRequestManager({
-            requestsPerSecond: options.rateLimit
-                ? Math.max(1, Math.round(options.rateLimit.numberOfRequests / Math.max(1, options.rateLimit.bufferInterval)))
-                : 4,
-            requestTimeout: (options.requestTimeout ?? 20) * 1000,
-            interceptor: new InterceptorChain({
-                cookieStorage: this.cookieStorage,
-                interceptor: options.interceptor,
-            }),
-        });
+        const manager = (
+            limit: { numberOfRequests: number; bufferInterval: number } | undefined,
+            sharedCookies?: () => Cookie[] | undefined,
+        ): RequestManager =>
+            App.createRequestManager({
+                requestsPerSecond: limit
+                    ? Math.max(1, Math.round(limit.numberOfRequests / Math.max(1, limit.bufferInterval)))
+                    : 4,
+                requestTimeout: (options.requestTimeout ?? 20) * 1000,
+                interceptor: new InterceptorChain({
+                    cookieStorage: this.cookieStorage,
+                    interceptor: options.interceptor,
+                    sharedCookies,
+                }),
+            });
+        this.requestManager = manager(options.rateLimit);
 
-        Application.bind(this.requestManager, cheerio);
+        Application.bind(
+            options.apiRateLimit
+                ? manager(options.apiRateLimit, () => this.requestManager.cookieStore?.getAllCookies())
+                : this.requestManager,
+            cheerio,
+        );
     }
 
     // ---------------------------------------------------------------------
@@ -260,6 +282,10 @@ export abstract class PopmangoSource
             this.lastManga = manga;
 
             const chapters = await this.getChapterList(manga);
+            // An empty list makes the app drop the title's reading progress
+            if (chapters.length === 0) {
+                throw new Error("No chapters were found. Reading progress is kept; try again later.");
+            }
 
             this.lastChapters = new Map(chapters.map((chapter) => [chapter.chapterId, chapter]));
             return chapters.map(toChapter);
@@ -298,10 +324,15 @@ export abstract class PopmangoSource
         return this.guard(async () => {
             const page = await this.getSearchResultItems(
                 {
-                    title: query.title?.trim() === "" ? undefined : query.title,
+                    title: query.title?.trim() ? plainQuotes(query.title) : undefined,
                     includedTags: query.includedTags.map((tag) => ({ id: tag.id, title: tag.label })),
                     excludedTags: query.excludedTags.map((tag) => ({ id: tag.id, title: tag.label })),
-                    parameters: query.parameters ?? {},
+                    parameters: Object.fromEntries(
+                        Object.entries(query.parameters ?? {}).map(([key, value]) => [
+                            key,
+                            typeof value === "string" ? plainQuotes(value) : value,
+                        ]),
+                    ),
                 },
                 metadata,
             );

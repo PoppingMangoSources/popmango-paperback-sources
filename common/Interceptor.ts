@@ -126,13 +126,21 @@ export class CookieStorageInterceptor {
 export class InterceptorChain implements SourceInterceptor {
     private readonly cookieStorage?: CookieStorageInterceptor;
     private readonly interceptor?: PaperbackInterceptor;
+    private readonly sharedCookies?: () => Cookie[] | undefined;
 
     constructor(options: {
         cookieStorage?: CookieStorageInterceptor;
         interceptor?: PaperbackInterceptor;
+        /**
+         * Another manager's native cookies. The app saves a Cloudflare
+         * clearance into the source's main manager, and a second manager may
+         * not share that store, so it sends those cookies itself.
+         */
+        sharedCookies?: () => Cookie[] | undefined;
     }) {
         this.cookieStorage = options.cookieStorage;
         this.interceptor = options.interceptor;
+        this.sharedCookies = options.sharedCookies;
     }
 
     async interceptRequest(request: Request): Promise<Request> {
@@ -141,6 +149,7 @@ export class InterceptorChain implements SourceInterceptor {
             method: request.method,
             headers: { ...request.headers },
             cookies: {
+                ...this.borrowedCookies(request.url),
                 ...(await this.cookieStorage?.all()),
                 ...cookiesToRecord(request.cookies),
             },
@@ -160,6 +169,29 @@ export class InterceptorChain implements SourceInterceptor {
             data: intercepted.data,
             cookies: recordToCookies(intercepted.cookies, hostOf(intercepted.url)),
         });
+    }
+
+    private borrowedCookies(url: string): Record<string, string> {
+        if (this.sharedCookies === undefined) {
+            return {};
+        }
+        let cookies: Cookie[];
+        try {
+            cookies = this.sharedCookies() ?? [];
+        } catch {
+            return {};
+        }
+        const host = hostOf(url);
+        const now = Date.now();
+        const borrowed: Record<string, string> = {};
+        for (const cookie of cookies) {
+            const domain = cookie.domain.replace(/^\./, "").toLowerCase();
+            const expired = cookie.expires !== undefined && cookie.expires.getTime() <= now;
+            if (!expired && domain && (host === domain || host.endsWith(`.${domain}`))) {
+                borrowed[cookie.name] = cookie.value;
+            }
+        }
+        return borrowed;
     }
 
     async interceptResponse(response: Response): Promise<Response> {
@@ -197,23 +229,44 @@ export class InterceptorChain implements SourceInterceptor {
         // Written onto the response the app handed over, not onto a copy of
         // it. Every 0.8 source that rebuilds an image assigns back to this
         // object and returns it unchanged, so that is the path known to work;
-        // nothing shows the runtime reads the object that comes back instead.
-        // A host that will not be written to falls through to the copy below.
+        // the app rejects any other object as an invalid return type (error
+        // 303). On that object only `rawData` can be set: `data`, `status`
+        // and `headers` are read-only, and writing one throws. So a field is
+        // written only when it actually changed, the bytes first, and a body
+        // the original will not take falls through to the copy below.
+        const mutable = response as { data?: string; rawData?: RawData; mimeType?: string };
+        let written = false;
         try {
-            const mutable = response as { data?: string; rawData?: RawData; mimeType?: string };
-
-            mutable.data = body.text;
-            mutable.rawData = body.raw;
-
-            if (contentTypeChanged) {
-                mutable.mimeType = body.contentType;
-                // The headers object is edited in place for the same reason.
-                setContentType(response.headers, body.contentType ?? "");
+            if (body.raw !== response.rawData) {
+                mutable.rawData = body.raw;
             }
-
-            return response;
+            if (body.text !== (response.data ?? "")) {
+                mutable.data = body.text;
+            }
+            written = true;
         } catch {
-            // Frozen, or the fields are accessors that refuse a write.
+            // A read-only field the change needed, or a frozen response.
+        }
+
+        if (written) {
+            // The type is insurance, set after the bytes. The app's response
+            // has been seen to refuse it; once the bytes are on that response,
+            // a refused type must not cost the response itself, so each write
+            // is tried on its own.
+            if (contentTypeChanged) {
+                try {
+                    mutable.mimeType = body.contentType;
+                } catch {
+                    // Not a field this response takes.
+                }
+                try {
+                    // The headers object is edited in place for the same reason.
+                    setContentType(response.headers, body.contentType ?? "");
+                } catch {
+                    // Headers it will not let be edited.
+                }
+            }
+            return response;
         }
 
         // Rebuilt field by field rather than spread, so nothing is lost if the

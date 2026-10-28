@@ -20,6 +20,7 @@ export class SettingsStore {
     private readonly keys: readonly string[];
     private readonly cache = new Map<string, unknown>();
     private hydration?: Promise<void>;
+    private writes: Promise<void> = Promise.resolve();
 
     constructor(stateManager: SourceStateManager, keys: readonly string[]) {
         this.stateManager = stateManager;
@@ -36,22 +37,21 @@ export class SettingsStore {
         return (this.hydration ??= this.hydrate());
     }
 
+    // One key at a time: parallel state-store calls race in the Swift bridge.
     private async hydrate(): Promise<void> {
-        await Promise.all(
-            this.keys.map(async (key) => {
-                try {
-                    const value = await this.stateManager.retrieve(key);
-                    // A value written this session wins over what was on disk.
-                    // Without this a setting changed while the load was still
-                    // in flight would appear to take and then revert.
-                    if (value !== null && value !== undefined && !this.cache.has(key)) {
-                        this.cache.set(key, value);
-                    }
-                } catch {
-                    // An unreadable key just falls back to its default.
+        for (const key of this.keys) {
+            try {
+                const value = await this.stateManager.retrieve(key);
+                // A value written this session wins over what was on disk.
+                // Without this a setting changed while the load was still
+                // in flight would appear to take and then revert.
+                if (value !== null && value !== undefined && !this.cache.has(key)) {
+                    this.cache.set(key, value);
                 }
-            }),
-        );
+            } catch {
+                // An unreadable key just falls back to its default.
+            }
+        }
     }
 
     /** The raw stored value, or `undefined` when nothing is set. */
@@ -62,7 +62,8 @@ export class SettingsStore {
     /** Stores a value, taking effect immediately and persisting behind. */
     set(key: string, value: unknown): void {
         this.cache.set(key, value);
-        void this.persist(key, value);
+        // Queued behind earlier writes for the same reason the load is sequential
+        this.writes = this.writes.then(() => this.persist(key, value));
     }
 
     private async persist(key: string, value: unknown): Promise<void> {
@@ -105,6 +106,32 @@ export class SettingsStore {
     boolean(key: string, fallback: boolean): boolean {
         const value = this.get(key);
         return typeof value === "boolean" ? value : fallback;
+    }
+
+    /**
+     * A site list kept across launches, such as genres for the filters, so
+     * opening search does not cost a request each time. A failed refresh
+     * falls back to the old copy. The key must be in `settingsKeys`.
+     */
+    async remembered<T>(key: string, maxAgeMs: number, load: () => Promise<T>): Promise<T> {
+        const stored = this.get(key) as { at?: unknown; value?: unknown } | undefined;
+        const at = typeof stored?.at === "number" ? stored.at : undefined;
+        if (at !== undefined && Date.now() - at < maxAgeMs) {
+            return stored!.value as T;
+        }
+        try {
+            const value = await load();
+            // An empty list is more likely a changed page than a site with nothing in it
+            if (!Array.isArray(value) || value.length > 0) {
+                this.set(key, { at: Date.now(), value });
+            }
+            return value;
+        } catch (error: unknown) {
+            if (at !== undefined) {
+                return stored!.value as T;
+            }
+            throw error;
+        }
     }
 }
 

@@ -56,7 +56,7 @@ import {
 export const MangaBerriInfo = sourceInfo({
     name: "MangaBerri",
     description: "Extension that pulls content from mangaberri.com.",
-    version: "1.0.2",
+    version: "1.0.3",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DOMAIN,

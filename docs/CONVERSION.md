@@ -146,6 +146,13 @@ either — a source cannot wait. Throttling is therefore the app's job:
 and nothing in a source paces itself. A retry loop retries immediately or not
 at all.
 
+That throttle also covers page images, which the app loads through the same
+request manager, so 0.9's `ignoreImages` has no effect here. A site whose API
+allows far fewer requests than its image host sets `apiRateLimit` as well: the
+source's own requests then go through a second, slower manager and pages keep
+`rateLimit`. QiScans does this, since its API runs out during a library refresh
+at more than one request a second.
+
 This one is worth being careful about, because the typechecker does not help.
 `@types/node` declares the timer functions globally and cheerio pulls those
 declarations in, so `setTimeout` compiles cleanly and then fails on a device
@@ -166,9 +173,20 @@ so the type is set alongside the new bytes as insurance for the formats sniffing
 may not cover, not because the common case needs it.
 
 The new bytes are written onto the response the app handed over, and that same
-object is returned. Assigning to it is the path 0.8 sources actually take;
-returning a different object is untried, so the chain only falls back to one if
-the original refuses to be written to.
+object is returned. Assigning to it is the path 0.8 sources actually take, and
+the app rejects a different object as an invalid return type (error 303). On
+the app's response only `rawData` can be set — `data`, `status` and `headers`
+are read-only, and writing one throws — so the chain writes only the fields that
+actually changed, and falls back to a copy only when one of them is refused. The
+content type is written after the bytes on its own: a response that refuses the
+type still goes back to the app, carrying the new bytes.
+
+A 0.9 interceptor that returns a fresh `ArrayBuffer` does not port as
+`App.createRawData(...)`: on 0.8 that returns `null` and every page fails with
+"error processing the byteArray". Same-length transforms (AES-CTR, XOR) write
+into `App.createByteArray(response.rawData)`, which is a view over the
+response's own buffer. Anything that changes the size goes through
+`App.createPBImage`/`App.createPBCanvas` and `canvas.encode`, as Mangago does.
 
 **Home page updates.** 0.9 can invalidate the home page after a setting
 changes. 0.8 decides for itself when to rebuild, so
@@ -177,7 +195,8 @@ sections appear the next time the reader opens the page.
 
 **Settings screens.** 0.9 forms become `getSettingsSections()`, built from the
 row helpers in `common/Menu.ts` and declaring `Capability.SETTINGS`. The base
-class wraps them in the single section 0.8's `getSourceMenu()` asks for.
+class wraps them in the single section 0.8's `getSourceMenu()` asks for. A
+reorderable list has no 0.8 row, so a home page keeps the source's own row order.
 Because 0.8's state store is asynchronous and a setting may be read from
 somewhere that cannot wait — an interceptor rewriting a header, a URL being
 assembled — every declared key is read into `this.settings` before any source

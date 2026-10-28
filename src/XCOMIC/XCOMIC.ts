@@ -76,7 +76,7 @@ import { XComicParser, isComicAllowed, toLatestUploadNodes, toPreferredTitleSour
 export const XCOMICInfo = sourceInfo({
     name: "XCOMIC",
     description: "Extension that pulls content from xcomic.me.",
-    version: "1.1.1",
+    version: "1.1.2",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DOMAIN,

@@ -3,6 +3,8 @@
 
 import type { DUIFormRow, DUISection } from "@paperback/types";
 
+import { plainQuotes } from "./Convert";
+
 /**
  * Builders for a source's settings screen.
  *
@@ -98,7 +100,7 @@ export function inputRow(
             label: options.label,
             value: binding(
                 async () => options.get(),
-                async (value: unknown) => options.set(typeof value === "string" ? value : ""),
+                async (value: unknown) => options.set(typeof value === "string" ? plainQuotes(value) : ""),
             ),
         }),
     );
@@ -126,6 +128,101 @@ export function labelRow(id: string, label: string, value?: string): DUIFormRow 
     return retain(App.createDUILabel({ id, label, value }));
 }
 
+/** Read-only text that wraps instead of truncating. */
+export function multilineLabelRow(id: string, label: string, value: string): DUIFormRow {
+    return retain(App.createDUIMultilineLabel({ id, label, value }));
+}
+
+/** A number picked with − and + buttons. */
+export function stepperRow(
+    id: string,
+    options: { label: string; min?: number; max?: number; step?: number; get: () => number; set: (value: number) => void },
+): DUIFormRow {
+    return retain(
+        App.createDUIStepper({
+            id,
+            label: options.label,
+            min: options.min,
+            max: options.max,
+            step: options.step,
+            value: binding(
+                async () => options.get(),
+                async (value: unknown) => {
+                    if (typeof value === "number" && Number.isFinite(value)) {
+                        options.set(value);
+                    }
+                },
+            ),
+        }),
+    );
+}
+
+/** A masked text box, for passwords and tokens. Store its value in the keychain. */
+export function secureInputRow(
+    id: string,
+    options: { label: string; get: () => string; set: (value: string) => void },
+): DUIFormRow {
+    return retain(
+        App.createDUISecureInputField({
+            id,
+            label: options.label,
+            value: binding(
+                async () => options.get(),
+                async (value: unknown) => options.set(typeof value === "string" ? value : ""),
+            ),
+        }),
+    );
+}
+
+/** A tappable action, such as clearing a cache or resetting settings. */
+export function buttonRow(id: string, label: string, onTap: () => Promise<void> | void): DUIFormRow {
+    return retain(App.createDUIButton({ id, label, onTap: async () => onTap() }));
+}
+
+/** A row that opens a web address. */
+export function linkRow(id: string, label: string, url: string): DUIFormRow {
+    return retain(App.createDUILink({ id, label, value: url }));
+}
+
+/** An image banner with a title, shown at the top of a form. */
+export function headerRow(id: string, options: { imageUrl: string; title: string; subtitle?: string }): DUIFormRow {
+    return retain(App.createDUIHeader({ id, ...options }));
+}
+
+/** A sign-in button that runs an OAuth flow and hands back the resulting tokens. */
+export function oauthButtonRow(
+    id: string,
+    options: {
+        label: string;
+        authorizeEndpoint: string;
+        clientId: string;
+        responseType: Record<string, unknown>;
+        redirectUri?: string;
+        scopes?: string[];
+        onSuccess: (accessToken: string, refreshToken: string | undefined) => Promise<void> | void;
+    },
+): DUIFormRow {
+    const { onSuccess, ...info } = options;
+    return retain(
+        App.createDUIOAuthButton({
+            id,
+            ...info,
+            successHandler: async (accessToken: string, refreshToken: string | undefined) =>
+                onSuccess(accessToken, refreshToken),
+        }),
+    );
+}
+
+/** A row that opens a nested form of further sections. */
+export function formRow(
+    id: string,
+    label: string,
+    sections: () => MenuSection[] | Promise<MenuSection[]>,
+): DUIFormRow {
+    const form = retain(App.createDUIForm({ sections: async () => retain((await sections()).map(toSection)) }));
+    return retain(App.createDUINavigationButton({ id, label, form }));
+}
+
 function toSection(section: MenuSection): DUISection {
     return retain(
         App.createDUISection({
@@ -149,15 +246,8 @@ export function settingsMenu(
     title: string,
     sections: () => MenuSection[] | Promise<MenuSection[]>,
 ): DUISection {
-    const form = retain(
-        App.createDUIForm({
-            // Built when the screen opens rather than up front, so a source whose
-            // settings depend on something fetched can wait for it here.
-            sections: async () => retain((await sections()).map(toSection)),
-        }),
-    );
-
-    const button = retain(App.createDUINavigationButton({ id: "settings_button", label: title, form }));
+    // Sections are built when the screen opens, so settings that depend on a fetch can wait for it.
+    const button = formRow("settings_button", title, sections);
 
     return retain(
         App.createDUISection({

@@ -44,8 +44,8 @@ or image processing when necessary; do not create one-line wrapper modules or
 service classes for plain requests. Prefer free functions for fetches/parsers;
 use classes where the SDK or shared adapter requires them. Put shared shapes in
 models, avoid `any`, and comment on non-obvious constraints rather than narrating
-code. Preserve existing license notices; new implementation files use the
-repository's GPL-3.0-or-later/Popmango header.
+code. New implementation files use the repository's GPL-3.0-or-later/Popmango
+header.
 
 Before implementing, inspect actual home/search/details/chapter/reader responses
 and record the request, field paths or selectors, pagination signal, and access
@@ -88,8 +88,18 @@ preserve that distinction and verify reconstructed images on a device.
 - The 0.8 reader returns image `pages`; it does not accept the 0.9 HTML novel
   chapter format. A novel badge alone does not add reader support.
 - When rewriting image bytes, preserve the native response object and set the
-  matching content type, following the existing interceptor. Verify rendering
-  on a device, not only that page URLs are returned.
+  matching content type, following the existing interceptor. Decrypt into
+  `App.createByteArray(response.rawData)` in place, or re-encode with
+  `canvas.encode`; `App.createRawData` returns `null` on 0.8 and the reader
+  drops the page (`check-globals` rejects it). Verify rendering on a device,
+  not only that page URLs are returned.
+- `interceptRequest` may await native calls and rewrite the URL.
+  `interceptResponse` cannot resend a request or change the status, so a
+  short-lived token in a page URL is renewed before the request, not after a 401.
+- Read "Lessons from working 0.8 sources" in the skill's `runtime.md` before
+  touching settings storage, chapter lists, typed text or Cloudflare handling.
+- Offline stubs of `App.*` must behave like the device, not like the Node
+  polyfills. Show a regression check failing on the old code before trusting it.
 
 ## Commands and completion
 
@@ -122,7 +132,9 @@ chapter were exercised. A blocked site, unavailable device, or unsupported
 devtools connection is unverified, not a pass. Node polyfills cannot prove Swift
 bridge behavior, settings retention, chapter grouping, or image rendering.
 
-New sources start at `1.0.0`. Bump the existing source's patch version when its
+New sources start at `1.0.0`, unless they take over a source ID another 0.8 repository
+already ships with identical manga and chapter IDs: then start one patch above
+its version (Kagane is `5.0.1` over a `5.0.0` build) so installs update in place. Bump the existing source's patch version when its
 shipped behavior changes. A shared behavior change needs bumps for the affected
 sources; docs and development tooling alone do not. Refresh the README using
 `npm run readme` when the published catalog changes and inspect its diff.

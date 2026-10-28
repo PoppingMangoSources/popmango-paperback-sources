@@ -23,6 +23,12 @@ the weekly run skips only documented entries in `.github/live-test-exclusions.js
 A manual source selection overrides its exclusion for rechecking. Do not classify a
 network block as a pass or automatically rewrite working code based on it.
 
+Offline stubs of `App.*` must model the device: `createByteArray` returns a
+view over the raw buffer and `createRawData` returns `null`. A permissive stub
+let a broken Toonkotsu ship with a passing check. Run a new regression against
+the old code once and confirm it fails. The live polyfill's axios throws on
+non-2xx responses, so `interceptResponse` never sees an error status in Node.
+
 Verify these on Paperback 0.8 because Node tests cannot prove them:
 
 - Settings open, persist and change the intended request or display.

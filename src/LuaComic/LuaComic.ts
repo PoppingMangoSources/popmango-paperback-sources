@@ -74,7 +74,7 @@ import {
 export const LuaComicInfo = sourceInfo({
     name: "Lua Comic",
     description: "Extension that pulls content from luacomic.org.",
-    version: "1.0.3",
+    version: "1.0.4",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DOMAIN,
