@@ -14,13 +14,12 @@ export const STATE_KEYS = {
     VISIBLE_SECTIONS: "visible_sections",
     ADULT: "adult",
     GENRES: "genres",
-    GENRES_FETCHED_AT: "genres_fetched_at",
 } as const;
 
 export const SETTINGS_KEYS = Object.values(STATE_KEYS);
 
-/** How long the site's genre list is kept before it is asked for again, as in 0.9. */
-export const GENRES_MAX_AGE_MS = 2 * 24 * 60 * 60 * 1000;
+/** How long the site's genre list is kept before it is asked for again. */
+export const GENRES_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 /**
  * The site's content types, by country of origin.

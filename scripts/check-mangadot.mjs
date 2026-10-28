@@ -73,6 +73,8 @@ const respond = (request) => {
 const state = new Map();
 globalThis.App = new Proxy({
   createSourceStateManager: () => ({ retrieve: async (key) => state.get(key), store: async (key, value) => { state.set(key, value); } }),
+  // As on a device; nothing here should need it.
+  createRawData: () => null,
   // Requests go through the source's own interceptor chain, as the app sends them.
   createRequestManager: ({ interceptor }) => ({
     getDefaultUserAgent: async () => 'Test',
@@ -127,6 +129,8 @@ console.log('search, as the site\'s own filters send it:');
   t('  a title order starts at A', Object.values((await search(plain, { include: ['sort::alphabetical'] })).query).slice(1, 3), ['alphabetical', 'asc']);
   t('  unless the order says otherwise',
     (await search(plain, { include: ['sort::alphabetical', 'order::desc'] })).query.sortOrder, 'desc');
+  t('  an exact title match leads the results',
+    (await search(plain, { title: 'title 2' })).page.results.map(({ mangaId }) => mangaId), ['2', '1']);
 
   const hiding = source({ hidden_tags: ['Gore', 'Romance'], search_origins: ['KR'], adult: 'both' });
   t('  included and excluded genres, with the hidden tags ruled out too',
@@ -167,9 +171,21 @@ console.log('\nfilters, from the site\'s genre list:');
   await first.getSearchTags();
   await source().getSearchTags();
   t('  it is asked for once, then kept across a restart', site.genreFetches, 1);
-  state.set('genres_fetched_at', Date.now() - 3 * 24 * 60 * 60 * 1000);
+  state.set('genres', { ...state.get('genres'), at: Date.now() - 25 * 60 * 60 * 1000 });
   await source().getSearchTags();
-  t('  and asked for again once two days old', site.genreFetches, 2);
+  t('  and asked for again once a day old', site.genreFetches, 2);
+
+  const settings = source();
+  // The app opens settings through getSourceMenu, which loads them first.
+  await settings.settings.load();
+  const refresh = (await settings.getSettingsSections()).flatMap(({ rows }) => rows).find((row) => row.id === 'refresh_tags');
+  await refresh.onTap();
+  t('  Refresh Tags asks again at once, while the kept list is still fresh', site.genreFetches, 3);
+  site.mode = 'challenge';
+  await refresh.onTap();
+  site.mode = 'normal';
+  t('  and a refresh that fails keeps the list it had',
+    (await settings.getSearchTags()).find(({ id }) => id === 'genre-genres')?.tags.length, 4);
 
   const details = await source().getMangaDetails('7');
   const filterIds = new Set(sections.flatMap(({ tags }) => tags.map(({ id }) => id)));

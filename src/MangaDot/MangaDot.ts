@@ -10,6 +10,7 @@ import {
     ContentRating,
     DiscoverSectionType,
     PopmangoSource,
+    buttonRow,
     selectRow,
     sourceInfo,
     type Chapter,
@@ -101,8 +102,13 @@ const originParam = (ids: string[]): string | undefined =>
 const nextPage = (data: SearchResponse, page: number): PageMetadata | undefined =>
     (data.pagination?.total_pages ?? 0) > page ? { page: page + 1 } : undefined;
 
+const loadGenres = async (): Promise<string[]> =>
+    listOf(await fetchGenres(), "genre list")
+        .filter((genre): genre is string => typeof genre === "string" && genre.trim().length > 0)
+        .sort((a, b) => a.localeCompare(b));
+
 export class MangaDot extends PopmangoSource {
-    private genresPromise?: Promise<string[]>;
+    private genres?: Promise<string[]>;
 
     /** Chapters the site serves from its uploads rather than its chapter store, by id. */
     private readonly trustedUploads = new Set<string>();
@@ -172,7 +178,7 @@ export class MangaDot extends PopmangoSource {
                 footer:
                     "Defaults for every search. Content types narrow it to those kinds of comics, and hidden tags " +
                     "leave out titles that carry them, unless a search asks for the tag. Choosing nothing means " +
-                    "everything.",
+                    "everything. The site's tags are kept for a day; Refresh Tags asks for them again now.",
                 rows: [
                     selectRow("search_origins", {
                         label: "Content types",
@@ -187,6 +193,10 @@ export class MangaDot extends PopmangoSource {
                         multiple: true,
                         get: () => this.hiddenTags,
                         set: (value) => this.settings.set(STATE_KEYS.HIDDEN_TAGS, value),
+                    }),
+                    buttonRow("refresh_tags", "Refresh Tags", async () => {
+                        this.genres = undefined;
+                        await this.getGenres(0);
                     }),
                 ],
             },
@@ -366,8 +376,11 @@ export class MangaDot extends PopmangoSource {
             adult: chosen(FILTERS.ADULT)[0] ?? this.adult,
         });
 
+        // An exact title match leads, so a reader moving a series here from another source finds it first.
+        const wanted = title.toLowerCase();
+        const exact = (item: SearchResultItem): number => Number(wanted.length > 0 && item.title.toLowerCase() === wanted);
         return {
-            items: toSearchResults(listOf(data.manga_list, "search results")),
+            items: toSearchResults(listOf(data.manga_list, "search results")).sort((a, b) => exact(b) - exact(a)),
             metadata: nextPage(data, page),
         };
     }
@@ -412,35 +425,15 @@ export class MangaDot extends PopmangoSource {
     // Internals
     // -----------------------------------------------------------------
 
-    /** The site's genre list: kept for two days, as the 0.9 source keeps it, and in memory for the session. */
-    private getGenres(): Promise<string[]> {
-        return (this.genresPromise ??= this.loadGenres().catch((error: unknown) => {
-            this.genresPromise = undefined;
+    /**
+     * The site's genre list, kept for a day and in memory for the session. A
+     * failed refresh keeps the old copy; a maximum age of 0 asks again now.
+     */
+    private getGenres(maxAgeMs = GENRES_MAX_AGE_MS): Promise<string[]> {
+        return (this.genres ??= this.settings.remembered(STATE_KEYS.GENRES, maxAgeMs, loadGenres).catch((error: unknown) => {
+            this.genres = undefined;
             throw error;
         }));
-    }
-
-    private async loadGenres(): Promise<string[]> {
-        const stored = this.settings.stringArray(STATE_KEYS.GENRES);
-        const fetchedAt = Number(this.settings.get(STATE_KEYS.GENRES_FETCHED_AT) ?? 0);
-        if (stored.length > 0 && Date.now() - fetchedAt < GENRES_MAX_AGE_MS) {
-            return stored;
-        }
-
-        try {
-            const genres = listOf(await fetchGenres(), "genre list")
-                .filter((genre): genre is string => typeof genre === "string" && genre.trim().length > 0)
-                .sort((a, b) => a.localeCompare(b));
-            this.settings.set(STATE_KEYS.GENRES, genres);
-            this.settings.set(STATE_KEYS.GENRES_FETCHED_AT, Date.now());
-            return genres;
-        } catch (error: unknown) {
-            // An old list beats none while the site is down; a challenge still has to reach the app.
-            if (stored.length > 0 && !(error instanceof CloudflareError)) {
-                return stored;
-            }
-            throw error;
-        }
     }
 
     /**
