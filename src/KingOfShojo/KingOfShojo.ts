@@ -71,7 +71,7 @@ import {
 export const KingOfShojoInfo = sourceInfo({
     name: "King of Shojo",
     description: "Extension that pulls content from kingofshojo.com.",
-    version: "1.0.3",
+    version: "1.0.4",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DEFAULT_DOMAIN,
