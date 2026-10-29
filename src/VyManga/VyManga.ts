@@ -52,7 +52,7 @@ import { extractMangaId, parseCards, parseChapterPages, parseChapters, parseGenr
 export const VyMangaInfo = sourceInfo({
     name: "VyManga",
     description: "Extension that pulls content from mangavyvy.net.",
-    version: "1.0.3",
+    version: "1.0.4",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DEFAULT_DOMAIN,

@@ -128,6 +128,11 @@ supported native image processing and test actual drawing on the app.
 - Fetch paged chapter lists one page at a time; a `Promise.all` burst trips
   site rate limits. Where `rateLimit` is not enough, queue calls one in flight.
 - Rebuild filter and settings objects on every call; do not cache SDK objects.
+- A source menu section with the id `settings`, or a settings button with the
+  id `settings_button`, makes the app crash when that settings screen is left.
+  `common/Menu.ts` uses `sourceMenu` and `content_settings`, tested on a
+  device; a bisect there showed the ids alone decide it, not headers, storage
+  or reuse.
 - Sorting exact title matches first in search makes migration from another
   source easier.
 - Calling `sectionCallback` with an empty row and again with the same object
