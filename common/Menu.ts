@@ -247,11 +247,14 @@ export function settingsMenu(
     sections: () => MenuSection[] | Promise<MenuSection[]>,
 ): DUISection {
     // Sections are built when the screen opens, so settings that depend on a fetch can wait for it.
-    const button = formRow("settings_button", title, sections);
+    // With the ids "settings" and "settings_button" the app crashed whenever a
+    // source's settings screen was left; a device bisect traced the crash to
+    // those two ids alone. These two were tested on the device in their place.
+    const button = formRow("content_settings", title, sections);
 
     return retain(
         App.createDUISection({
-            id: "settings",
+            id: "sourceMenu",
             isHidden: false,
             rows: async () => [button],
         }),

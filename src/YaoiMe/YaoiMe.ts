@@ -78,7 +78,7 @@ import {
 export const YaoiMeInfo = sourceInfo({
     name: "YaoiMe",
     description: "Extension that pulls boys' love manga, manhwa and manhua from yaoi.me.",
-    version: "1.0.2",
+    version: "1.0.3",
     icon: "icon.png",
     language: "Multi",
     websiteBaseURL: DOMAIN,

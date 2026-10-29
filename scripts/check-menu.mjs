@@ -63,8 +63,10 @@ t('form row opens nested sections', [nested.type, sections[0].type, (await secti
 
 const root = menu.settingsMenu('Settings', () => [{ id: 's', rows: [stepper] }]);
 const [entry] = await root.rows();
-t('settings menu still opens through one button', [entry.id, (await (await entry.form.sections())[0].rows())[0].type],
-  ['settings_button', 'DUIStepper']);
+t('settings menu still opens through one button', [(await (await entry.form.sections())[0].rows())[0].type], ['DUIStepper']);
+// The app crashes when a settings screen built under "settings" or
+// "settings_button" is left; these ids were tested on a device instead.
+t('  under ids the app does not crash on leaving', [root.id, entry.id], ['sourceMenu', 'content_settings']);
 
 rmSync(out, { recursive: true, force: true });
 if (fail) { console.error(`\n${fail} failed`); process.exit(1); }
