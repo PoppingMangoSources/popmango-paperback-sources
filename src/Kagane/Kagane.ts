@@ -41,6 +41,7 @@ import {
     GENRE_TYPES,
     HOME_ROW_SIZE,
     LANGUAGE_OPTIONS,
+    LIST_MAX_AGE_MS,
     MATCH_OPTIONS,
     MAX_FILTER_PAGES,
     MIRRORS,
@@ -65,6 +66,7 @@ import {
     type SectionId,
     type SeriesSummary,
     type TagEntry,
+    type UploadSource,
     type UploadSourceMode,
 } from "./models";
 import {
@@ -100,7 +102,7 @@ import { HIDDEN_THEMES, POPULAR_TAGS, tagVariants } from "./tags";
 export const KaganeInfo = sourceInfo({
     name: "Kagane",
     description: "Extension that pulls manga, manhwa, manhua and comics from kagane.cx.",
-    version: "5.0.3",
+    version: "5.0.4",
     icon: "icon.png",
     language: "Multi",
     websiteBaseURL: DOMAIN,
@@ -118,11 +120,16 @@ const SERIES_LINK = new RegExp(
 export class Kagane extends PopmangoSource {
     private readonly pageCounts = new Map<string, number>();
 
+    private hiddenTags?: { text: string; ids: Promise<string[]> };
+
     constructor(cheerio: CheerioAPI) {
         super(cheerio, {
             domain: DOMAIN,
             settingsKeys: SETTINGS_KEYS,
-            rateLimit: { numberOfRequests: 3, bufferInterval: 1 },
+            // Pages come through the app's throttle too; at 3 a second a 60-page chapter
+            // took 20 seconds to ask for. The site's own API keeps its 3.
+            rateLimit: { numberOfRequests: 6, bufferInterval: 1 },
+            apiRateLimit: { numberOfRequests: 3, bufferInterval: 1 },
             interceptor: new KaganeInterceptor(() => this.mirror),
         });
     }
@@ -132,7 +139,7 @@ export class Kagane extends PopmangoSource {
     }
 
     override async getSettingsSections(): Promise<MenuSection[]> {
-        const genres = await fetchGenres(this.site).catch(() => [] as GenreEntry[]);
+        const genres = await this.genreList().catch(() => [] as GenreEntry[]);
 
         const sections: MenuSection[] = [
             {
@@ -285,8 +292,8 @@ export class Kagane extends PopmangoSource {
     // 0.8 has no sort or single-choice control, so those are tag sections; the first pick wins.
     override async getFilterSections(): Promise<TagSection[]> {
         const [genres, sources] = await Promise.all([
-            fetchGenres(this.site).catch(() => [] as GenreEntry[]),
-            fetchSources(this.site).catch(() => []),
+            this.genreList().catch(() => [] as GenreEntry[]),
+            this.sourceList().catch(() => [] as UploadSource[]),
         ]);
 
         const section = (id: string, title: string, options: Array<{ id: string; title: string }>): TagSection => ({
@@ -517,7 +524,7 @@ export class Kagane extends PopmangoSource {
 
     private async view(full = false): Promise<ViewOptions> {
         const showSource = this.settings.boolean(STATE_KEYS.SHOW_SOURCE_IN_TITLE, false);
-        const sources = showSource ? await fetchSources(this.site).catch(() => []) : [];
+        const sources = showSource ? await this.sourceList().catch(() => [] as UploadSource[]) : [];
 
         return {
             cover: (imageId, wantFull) => coverUrl(this.site, imageId, wantFull ?? full),
@@ -589,8 +596,62 @@ export class Kagane extends PopmangoSource {
 
     private async hiddenTagIds(): Promise<string[]> {
         const themes = new Set(this.settings.stringArray(STATE_KEYS.HIDDEN_THEMES));
-        const typed = (await this.typedTags(this.settings.string(STATE_KEYS.HIDDEN_TAGS, ""))).included.flat();
+        const text = this.settings.string(STATE_KEYS.HIDDEN_TAGS, "");
+        const typed = text ? await this.typedHiddenTagIds(text) : [];
         return [...typed, ...HIDDEN_THEMES.filter((theme) => themes.has(theme.id)).flatMap((theme) => theme.tagIds)];
+    }
+
+    // Every browse applies the hidden tags, and resolving names takes the whole 1.8 MB tag
+    // list. So the ids they resolve to are kept for a day, shared by the rows of one home
+    // page, and looked up again only when the text changes.
+    private typedHiddenTagIds(text: string): Promise<string[]> {
+        if (this.hiddenTags?.text !== text) {
+            const ids = this.resolveHiddenTags(text);
+            this.hiddenTags = { text, ids };
+            ids.catch(() => {
+                if (this.hiddenTags?.ids === ids) {
+                    this.hiddenTags = undefined;
+                }
+            });
+        }
+        return this.hiddenTags.ids;
+    }
+
+    private async resolveHiddenTags(text: string): Promise<string[]> {
+        const stored = this.settings.get(STATE_KEYS.HIDDEN_TAG_IDS) as { text?: unknown; ids?: unknown; at?: unknown } | undefined;
+        const kept =
+            stored?.text === text && Array.isArray(stored.ids) && stored.ids.every((id) => typeof id === "string")
+                ? (stored.ids as string[])
+                : undefined;
+        if (kept !== undefined && typeof stored?.at === "number" && Date.now() - stored.at < LIST_MAX_AGE_MS) {
+            return kept;
+        }
+
+        try {
+            const ids = (await this.typedTags(text)).included.flat();
+            this.settings.set(STATE_KEYS.HIDDEN_TAG_IDS, { text, ids, at: Date.now() });
+            return ids;
+        } catch (error: unknown) {
+            // Names resolved before stay hidden while the list cannot be fetched
+            if (kept !== undefined) {
+                return kept;
+            }
+            throw error;
+        }
+    }
+
+    // Kept for a day across launches, like the repository's other sources' lists; every
+    // mirror serves the same ones. Only the fields used are kept.
+    private genreList(): Promise<GenreEntry[]> {
+        return this.settings.remembered(STATE_KEYS.GENRE_LIST, LIST_MAX_AGE_MS, async () =>
+            (await fetchGenres(this.site)).map(({ id, genre_name, genre_type }) => ({ id, genre_name, genre_type })),
+        );
+    }
+
+    private sourceList(): Promise<UploadSource[]> {
+        return this.settings.remembered(STATE_KEYS.SOURCE_LIST, LIST_MAX_AGE_MS, async () =>
+            (await fetchSources(this.site)).map(({ source_id, source_type, title }) => ({ source_id, source_type, title })),
+        );
     }
 
     private async resolveId(kind: "staff" | "groups", name: string | undefined): Promise<string | undefined> {

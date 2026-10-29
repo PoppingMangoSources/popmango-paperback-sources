@@ -418,7 +418,21 @@ export async function resolveName(site: string, kind: "staff" | "groups", name: 
 let integrity: { token: string; expiresAt: number; site: string } | undefined;
 let pendingIntegrity: Promise<string> | undefined;
 
-// Minted against session cookies, so the front page is loaded first to warm them.
+// A token needs no session: the front page sets no cookies, and a token minted without any
+// opens chapters. So it is asked for directly, and the 1.3 MB front page is only loaded when
+// the site refuses one, in case it starts tying tokens to a session.
+async function mint(site: string): Promise<IntegrityResponse> {
+    try {
+        return await getJson<IntegrityResponse>(`${site}/api/integrity`, {});
+    } catch (error: unknown) {
+        if (error instanceof CloudflareError) {
+            throw error;
+        }
+        await Application.scheduleRequest({ url: `${site}/`, method: "GET" }).catch(() => undefined);
+        return getJson<IntegrityResponse>(`${site}/api/integrity`, {});
+    }
+}
+
 async function integrityToken(site: string, force: boolean): Promise<string> {
     if (!force && integrity !== undefined && integrity.site === site && Date.now() < integrity.expiresAt) {
         return integrity.token;
@@ -429,8 +443,7 @@ async function integrityToken(site: string, force: boolean): Promise<string> {
 
     pendingIntegrity = (async () => {
         try {
-            await Application.scheduleRequest({ url: `${site}/`, method: "GET" }).catch(() => undefined);
-            const minted = await getJson<IntegrityResponse>(`${site}/api/integrity`, {});
+            const minted = await mint(site);
             integrity = { token: minted.token, expiresAt: minted.exp * 1000 - TOKEN_MARGIN_MS, site };
             return minted.token;
         } catch (error: unknown) {
