@@ -13,6 +13,8 @@ export const STATE_KEYS = {
     TIME_RANGE: "time_range",
     VISIBLE_SECTIONS: "visible_sections",
     ADULT: "adult",
+    CHAPTER_LANGUAGES: "chapter_languages",
+    CHAPTER_UPLOADS: "chapter_uploads",
     GENRES: "genres",
 } as const;
 
@@ -49,6 +51,98 @@ export const ADULT_OPTIONS = [
 
 export type AdultChoice = (typeof ADULT_OPTIONS)[number]["id"];
 
+/** The languages the site's chapters come in, by the codes it gives them. */
+export const LANGUAGE_OPTIONS = [
+    { id: "ar", title: "Arabic" },
+    { id: "bg", title: "Bulgarian" },
+    { id: "my", title: "Burmese" },
+    { id: "zh", title: "Chinese" },
+    { id: "zh-hk", title: "Chinese (Hong Kong)" },
+    { id: "cs", title: "Czech" },
+    { id: "da", title: "Danish" },
+    { id: "nl", title: "Dutch" },
+    { id: "en", title: "English" },
+    { id: "tl", title: "Filipino" },
+    { id: "fi", title: "Finnish" },
+    { id: "fr", title: "French" },
+    { id: "ka", title: "Georgian" },
+    { id: "de", title: "German" },
+    { id: "el", title: "Greek" },
+    { id: "he", title: "Hebrew" },
+    { id: "hi", title: "Hindi" },
+    { id: "hu", title: "Hungarian" },
+    { id: "id", title: "Indonesian" },
+    { id: "it", title: "Italian" },
+    { id: "ja", title: "Japanese" },
+    { id: "ko", title: "Korean" },
+    { id: "la", title: "Latin" },
+    { id: "lt", title: "Lithuanian" },
+    { id: "ms", title: "Malay" },
+    { id: "mn", title: "Mongolian" },
+    { id: "no", title: "Norwegian" },
+    { id: "pl", title: "Polish" },
+    { id: "pt", title: "Portuguese" },
+    { id: "pt-br", title: "Portuguese (Brazil)" },
+    { id: "ro", title: "Romanian" },
+    { id: "ru", title: "Russian" },
+    { id: "es", title: "Spanish" },
+    { id: "es-la", title: "Spanish (Latin America)" },
+    { id: "sv", title: "Swedish" },
+    { id: "th", title: "Thai" },
+    { id: "tr", title: "Turkish" },
+    { id: "uk", title: "Ukrainian" },
+    { id: "vi", title: "Vietnamese" },
+];
+
+export const DEFAULT_LANGUAGES = ["en"];
+
+/** Which of a chapter's uploads are listed, when it has several. */
+export const UPLOAD_OPTIONS = [
+    { id: "group", title: "One group per series" },
+    { id: "best", title: "Best upload per chapter" },
+    { id: "all", title: "Every upload" },
+] as const;
+
+export type UploadChoice = (typeof UPLOAD_OPTIONS)[number]["id"];
+
+/**
+ * Groups whose uploads are official releases, by name in lower case.
+ *
+ * The site marks none itself. These are the names the Aidoku source
+ * recognises, with the site's own Official group and the platforms seen on
+ * it besides.
+ */
+export const OFFICIAL_GROUPS: ReadonlySet<string> = new Set([
+    "official",
+    "official?",
+    "animate international",
+    "comikey",
+    "crunchyroll",
+    "dark horse manga",
+    "fakku",
+    "j-novel club",
+    "k-manga",
+    "k manga",
+    "kodansha usa",
+    "kodansha comics",
+    "manga plus",
+    "mangaplus",
+    "manga up!",
+    "one peace books",
+    "seven seas entertainment",
+    "square enix manga",
+    "viz manga",
+    "viz media",
+    "viz shonen jump",
+    "yen press",
+    "manta",
+    "tapas",
+    "tappytoon",
+    "webtoon",
+    "line webtoon",
+    "toomics",
+]);
+
 /** Search orders. Relevance only means something with a search term. */
 export const SORT_OPTIONS: Tag[] = [
     { id: "relevance", title: "Relevance" },
@@ -82,6 +176,7 @@ export type TimeRange = (typeof TIME_RANGE_OPTIONS)[number]["id"];
 
 export const SECTIONS = {
     MOST_VIEWED: "most_viewed",
+    TRENDING: "trending",
     TOP_RATED: "top_rated",
     MOST_TRACKED: "most_tracked",
     LATEST_UPDATES: "latest_updates",
@@ -94,6 +189,7 @@ export type SectionId = (typeof SECTIONS)[keyof typeof SECTIONS];
 // 0.8 cannot show; those tags stay reachable as search filters.
 export const SECTION_DEFINITIONS: Record<SectionId, DiscoverSection> = {
     [SECTIONS.MOST_VIEWED]: { id: SECTIONS.MOST_VIEWED, title: "Most Viewed", type: DiscoverSectionType.featured },
+    [SECTIONS.TRENDING]: { id: SECTIONS.TRENDING, title: "Trending", type: DiscoverSectionType.simpleCarousel },
     [SECTIONS.TOP_RATED]: { id: SECTIONS.TOP_RATED, title: "Top Rated", type: DiscoverSectionType.prominentCarousel },
     [SECTIONS.MOST_TRACKED]: {
         id: SECTIONS.MOST_TRACKED,
@@ -112,9 +208,10 @@ export const SECTION_DEFINITIONS: Record<SectionId, DiscoverSection> = {
     },
 };
 
-/** 0.9's default order. */
+/** 0.9's default order, with the site's newer Trending row after the first. */
 export const SECTION_IDS: SectionId[] = [
     SECTIONS.MOST_VIEWED,
+    SECTIONS.TRENDING,
     SECTIONS.TOP_RATED,
     SECTIONS.MOST_TRACKED,
     SECTIONS.LATEST_UPDATES,
@@ -276,7 +373,13 @@ export interface ChapterEntry {
     uploader_upload_status?: string | null;
     date_added?: string | null;
     scanlator_name?: string | null;
+    /** 0 when the upload has no group. */
+    group_id?: number | null;
     group_name?: string | null;
+    /** Every group credited, for a joint release. */
+    groups?: Array<{ id?: number | null; name?: string | null } | null> | null;
+    uploader_id?: string | null;
+    uploader_username?: string | null;
 }
 
 export interface ChapterImagesResponse {

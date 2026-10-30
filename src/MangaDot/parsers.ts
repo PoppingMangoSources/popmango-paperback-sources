@@ -16,6 +16,7 @@ import {
 import {
     DOMAIN,
     FILTERS,
+    OFFICIAL_GROUPS,
     TAG_GROUPS,
     filterTag,
     tagGroupOf,
@@ -24,6 +25,7 @@ import {
     type MangaData,
     type MangaDataResponse,
     type MangaSectionItem,
+    type UploadChoice,
 } from "./models";
 
 // A tag id is the name percent-encoded so it passes the app's id rules and
@@ -216,8 +218,164 @@ export const parseMangaDetails = ({ manga }: MangaDataResponse, mangaId: string)
     };
 };
 
+interface Upload {
+    entry: ChapterEntry;
+    /** Who it is by: its group, or for an upload without one, its scanlator or uploader. */
+    by: string;
+    official: boolean;
+    addedAt: number;
+    /**
+     * The whole chapter it is an upload of, or part of: 15.5 is a part of 15.
+     * An upload without a number is never merged.
+     */
+    chapter?: string;
+}
+
+const NO_GROUP = "no group";
+
+const lowerText = (value: string | null | undefined): string => cleanText(value).toLowerCase();
+
+const toUpload = (entry: ChapterEntry): Upload => {
+    const group = lowerText(entry.group_name);
+    const scanlator = lowerText(entry.scanlator_name);
+    const by =
+        entry.group_id && group !== NO_GROUP
+            ? `group:${entry.group_id}`
+            : scanlator && scanlator !== NO_GROUP
+              ? `scanlator:${scanlator}`
+              : `uploader:${entry.uploader_id ?? entry.uploader_username ?? ""}`;
+    const credited = [group, scanlator, ...(entry.groups ?? []).map((credit) => lowerText(credit?.name))];
+    return {
+        entry,
+        by,
+        official: credited.some((name) => OFFICIAL_GROUPS.has(name)),
+        addedAt: parseSiteDate(entry.date_added)?.getTime() ?? 0,
+    };
+};
+
 /**
- * Every upload of every chapter, as the site lists them.
+ * Marks which whole chapter each upload is of, and its volume too in a series
+ * whose numbering starts again each volume, which shows as one uploader having
+ * the same number in two volumes.
+ *
+ * Whole chapters, because groups split them differently: one releases 15
+ * whole, another as 15 and 15.5, and matching exact numbers would list the
+ * second half after the whole chapter.
+ */
+const markChapters = (uploads: Upload[]): void => {
+    const numbered = uploads.filter(
+        ({ entry }) => typeof entry.chapter_number === "number" && Number.isFinite(entry.chapter_number),
+    );
+    const volumeOf = new Map<string, string>();
+    let restarts = false;
+    for (const { entry, by } of numbered) {
+        const seen = `${by}|${entry.chapter_number}`;
+        const volume = String(entry.volume_number ?? "");
+        restarts = restarts || (volumeOf.has(seen) && volumeOf.get(seen) !== volume);
+        volumeOf.set(seen, volume);
+    }
+    for (const upload of numbered) {
+        const whole = Math.floor(upload.entry.chapter_number as number);
+        upload.chapter = restarts ? `${upload.entry.volume_number ?? ""}|${whole}` : String(whole);
+    }
+};
+
+/**
+ * Each chapter from the first uploader to have it, in the order given, with
+ * every part that uploader has of it. One uploader's repeat of the same
+ * number is left out.
+ */
+const firstOfEach = (uploads: Upload[]): ChapterEntry[] => {
+    const takenBy = new Map<string, string>();
+    const listed = new Set<string>();
+    const kept: ChapterEntry[] = [];
+    for (const { entry, by, chapter } of uploads) {
+        if (chapter !== undefined) {
+            const part = `${chapter}|${entry.chapter_number}`;
+            if ((takenBy.get(chapter) ?? by) !== by || listed.has(part)) {
+                continue;
+            }
+            takenBy.set(chapter, by);
+            listed.add(part);
+        }
+        kept.push(entry);
+    }
+    return kept;
+};
+
+const newestFirst = (a: Upload, b: Upload): number => b.addedAt - a.addedAt || b.entry.id - a.entry.id;
+
+/** Chapter by chapter, the official upload, or else the newest, with its parts. */
+const bestOfEach = (uploads: Upload[]): ChapterEntry[] =>
+    firstOfEach([...uploads].sort((a, b) => Number(b.official) - Number(a.official) || newestFirst(a, b)));
+
+/**
+ * One uploader for as much of the series as it has, its gaps filled from the
+ * next: official releases first, then whoever has the most chapters, then
+ * whoever uploaded last.
+ */
+const oneGroup = (uploads: Upload[]): ChapterEntry[] => {
+    const standing = new Map<string, { official: boolean; chapters: Set<string>; latest: number }>();
+    for (const upload of uploads) {
+        const record = standing.get(upload.by) ?? { official: false, chapters: new Set<string>(), latest: 0 };
+        record.official = record.official || upload.official;
+        if (upload.chapter !== undefined) {
+            record.chapters.add(upload.chapter);
+        }
+        record.latest = Math.max(record.latest, upload.addedAt);
+        standing.set(upload.by, record);
+    }
+    const rank = new Map(
+        [...standing]
+            .sort(
+                ([, a], [, b]) =>
+                    Number(b.official) - Number(a.official) ||
+                    b.chapters.size - a.chapters.size ||
+                    b.latest - a.latest,
+            )
+            .map(([by], index) => [by, index]),
+    );
+    return firstOfEach(
+        [...uploads].sort((a, b) => (rank.get(a.by) ?? 0) - (rank.get(b.by) ?? 0) || newestFirst(a, b)),
+    );
+};
+
+/**
+ * The uploads to list, out of every upload of every chapter.
+ *
+ * Only the chosen languages are kept, none chosen meaning all of them; a
+ * series with nothing in them keeps every language rather than showing
+ * nothing. Each language then has its uploads picked on its own, so each
+ * keeps its own group.
+ */
+export const pickUploads = (
+    entries: ChapterEntry[],
+    languages: readonly string[],
+    choice: UploadChoice,
+): ChapterEntry[] => {
+    const languageOf = (entry: ChapterEntry): string => lowerText(entry.language) || "en";
+    const wanted = new Set(languages);
+    const chosen = wanted.size === 0 ? entries : entries.filter((entry) => wanted.has(languageOf(entry)));
+    const shown = chosen.length > 0 ? chosen : entries;
+    if (choice === "all") {
+        return shown;
+    }
+
+    const byLanguage = new Map<string, Upload[]>();
+    for (const entry of shown) {
+        const language = languageOf(entry);
+        const uploads = byLanguage.get(language) ?? [];
+        uploads.push(toUpload(entry));
+        byLanguage.set(language, uploads);
+    }
+    return [...byLanguage.values()].flatMap((uploads) => {
+        markChapters(uploads);
+        return choice === "group" ? oneGroup(uploads) : bestOfEach(uploads);
+    });
+};
+
+/**
+ * The uploads to list, in the order the app shows them.
  *
  * The site gives no order of its own, so the app is handed one: volumes in
  * turn, a volume not yet assigned counting as the newest, then chapter
