@@ -39,9 +39,15 @@ export const STATE_KEYS = {
     SHOW_SOURCE_IN_TITLE: "kagane_show_source_in_title",
     SHOW_SPOILER_TAGS: "kagane_show_spoiler_tags",
     VISIBLE_SECTIONS: "kagane_visible_sections",
+    HIDDEN_TAG_IDS: "kagane_hidden_tag_ids",
+    GENRE_LIST: "kagane_genre_list",
+    SOURCE_LIST: "kagane_source_list",
 } as const;
 
 export const SETTINGS_KEYS = Object.values(STATE_KEYS);
+
+// The site's lists, and the ids typed hidden tags resolve to, are kept this long across launches.
+export const LIST_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 export type ContentRatingId = "Safe" | "Suggestive" | "Erotica" | "Pornographic";
 

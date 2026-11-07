@@ -25,31 +25,63 @@ const CHAPTER = '01a11fa7-75e7-7369-a117-879a61b2b264';
 const FILES = ['01a11fa7-0000-7000-8000-000000000001.jxl', '01a11fa7-0000-7000-8000-000000000002.avif'];
 const jwt = exp => ['e30', Buffer.from(JSON.stringify({ book_id: CHAPTER, exp: Math.floor(exp / 1000) })).toString('base64url'), 'sig'].join('.');
 
-const asked = { front: 0, integrity: 0, reader: 0 };
+const asked = { front: 0, integrity: 0, reader: 0, tags: 0, genres: 0, sources: 0 };
 let readerExp = 0;
 let readerFiles = FILES;
+let refuseIntegrity = 0;
+let refuseReader = 0;
+let searchBody;
 const reply = (status, body) => ({ status, headers: { 'content-type': 'application/json' }, data: JSON.stringify(body), rawData: undefined });
 const schedule = async request => {
   await new Promise(resolve => setImmediate(resolve));
   if (request.url === 'https://kagane.cx/') { asked.front++; return reply(200, {}); }
-  if (request.url.endsWith('/api/integrity')) { asked.integrity++; return reply(200, { token: 'integrity', exp: Math.floor(Date.now() / 1000) + 300 }); }
+  if (request.url.endsWith('/api/integrity')) {
+    asked.integrity++;
+    if (refuseIntegrity > 0) { refuseIntegrity--; return reply(403, { error: 'no session' }); }
+    return reply(200, { token: 'integrity', exp: Math.floor(Date.now() / 1000) + 300 });
+  }
   if (/\/api\/v2\/books\//.test(request.url)) {
     asked.reader++;
+    if (refuseReader > 0) { refuseReader--; return reply(403, { error: 'stale token' }); }
     return reply(200, {
       access_token: jwt(readerExp), cache_url: 'https://akari.kstatic.to',
       manifest: { pages: readerFiles.map((file, i) => ({ page_no: i + 1, page_id: file.split('.')[0], ext: file.split('.')[1] })) },
     });
   }
+  // Case variants share a name, as on the site
+  if (request.url.endsWith('/api/v2/tags/list')) {
+    asked.tags++;
+    return reply(200, [{ id: 't1', tag_name: 'Gore' }, { id: 't2', tag_name: 'gore' }, { id: 't3', tag_name: 'Isekai' }, { id: 't4', tag_name: 'Harem' }]);
+  }
+  if (request.url.endsWith('/api/v2/genres/list')) {
+    asked.genres++;
+    return reply(200, [{ id: 'g1', genre_name: 'Action', genre_type: 'genre', created_at: 'unused' }]);
+  }
+  if (request.url.endsWith('/api/v2/sources/list')) {
+    asked.sources++;
+    return reply(200, { sources: [{ source_id: 's1', source_type: 'Official', title: 'Publisher', created_at: 'unused' }] });
+  }
+  if (request.url.includes('/api/v2/search/series')) { searchBody = JSON.parse(request.data); return reply(200, { content: [], last: true }); }
   throw new Error(`unexpected request ${request.url}`);
 };
+// One store for every instance, so a fresh load below is the app after a restart.
+const state = new Map();
+const managers = [];
 globalThis.App = {
-  createSourceStateManager: () => ({ retrieve: async () => undefined, store: async () => {} }),
-  createRequestManager: options => ({ ...options, getDefaultUserAgent: async () => 'UA', schedule }),
+  createSourceStateManager: () => ({ retrieve: async key => state.get(key), store: async (key, value) => { state.set(key, value); } }),
+  createRequestManager: options => { managers.push(options.requestsPerSecond); return { ...options, getDefaultUserAgent: async () => 'UA', schedule }; },
   createRequest: r => ({ ...r }), createCookie: c => c,
+  createPagedResults: r => r, createPartialSourceManga: r => r, createTagSection: r => r, createTag: r => r,
 };
 const load = file => require(path.join(out, file));
 const { freshPageUrl, tokenExpiry, pageUrl, KaganeInterceptor } = load('src/Kagane/network.js');
 new (load('src/Kagane/Kagane.js').Kagane)(require('cheerio'));
+const requestRates = [...managers];
+// Module state starts over, as when the app starts the source again; the store survives.
+const restarted = () => {
+  for (const key of Object.keys(require.cache)) if (key.startsWith(out)) delete require.cache[key];
+  return new (load('src/Kagane/Kagane.js').Kagane)(require('cheerio'));
+};
 
 let fail = 0;
 const t = (name, got, want) => { const ok = got === want; if (!ok) fail++;
@@ -77,6 +109,7 @@ reset();
 const fresh = await Promise.all([...stale, ...stale].map(url => freshPageUrl(site, url)));
 t('  one reader session for four pages', asked.reader, 1);
 t('  one integrity token', asked.integrity, 1);
+t('  asked for directly, without the 1.3 MB front page', asked.front, 0);
 t('  every page carries the new token', fresh.every(url => tokenOf(url) === jwt(readerExp)), true);
 t('  each page keeps its own file', fresh.map(url => new URL(url).pathname.split('/').pop()).join(), [...FILES, ...FILES].join());
 reset();
@@ -106,6 +139,55 @@ const unchanged = await interceptor.interceptRequest({ url: failing, method: 'GE
 t('  a failed renewal sends the page as it was', unchanged.url, failing);
 const foreign = 'https://example.com/api/v2/books/page/' + CHAPTER + '/' + FILES[0] + '?token=' + jwt(now - 1_000);
 t('  a host it does not trust is never re-signed', (await interceptor.interceptRequest({ url: foreign, method: 'GET', headers: {}, cookies: {} })).url, foreign);
+
+console.log('\nA refused integrity token:');
+const refusedChapter = '01a11fa7-75e7-7369-a117-879a61b2b267';
+readerFiles = FILES;
+refuseReader = 1;
+refuseIntegrity = 1;
+reset();
+await freshPageUrl(site, pageUrl('https://akari.kstatic.to', refusedChapter, FILES[0], jwt(now - 1_000)));
+t('  loads the front page once and asks again', [asked.front, asked.integrity].join(), '1,2');
+
+console.log('\nRequest rates:');
+t('  page images at 6 a second, the site\'s API at 3', requestRates.join(), '6,3');
+
+console.log('\nHidden tags typed in the settings:');
+const browse = source => source.getSearchResults({ title: '', includedTags: [], excludedTags: [], parameters: {} }, undefined);
+let kagane = restarted();
+kagane.settings.set('kagane_hidden_tags', 'Gore, isekai');
+reset();
+await browse(kagane);
+t('  resolve through the tag list once', asked.tags, 1);
+t('  every case variant is ruled out', searchBody.tags.exclude.join(), 't1,t2,t3');
+reset();
+await browse(kagane);
+await browse(restarted());
+t('  and are not looked up again, even after a restart', asked.tags, 0);
+kagane = restarted();
+kagane.settings.set('kagane_hidden_tags', 'Harem');
+reset();
+await browse(kagane);
+t('  changing them looks them up again', [asked.tags, searchBody.tags.exclude.join()].join(' '), '1 t4');
+state.set('kagane_hidden_tag_ids', { ...state.get('kagane_hidden_tag_ids'), at: Date.now() - 25 * 60 * 60 * 1000 });
+reset();
+await browse(restarted());
+t('  and a day later they are looked up again', asked.tags, 1);
+kagane = restarted();
+kagane.settings.set('kagane_hidden_tags', 'Nope');
+message = '';
+try { await browse(kagane); } catch (error) { message = error.message; }
+t('  a name the site lacks is still reported', message, 'Kagane has no tag named Nope.');
+
+console.log('\nThe filter sheet\'s lists:');
+reset();
+await restarted().getSearchTags();
+t('  genres and upload sources are fetched once', [asked.genres, asked.sources].join(), '1,1');
+reset();
+await restarted().getSearchTags();
+t('  and kept across a restart', [asked.genres, asked.sources].join(), '0,0');
+t('  keeping only the fields used', JSON.stringify([state.get('kagane_genre_list').value, state.get('kagane_source_list').value]),
+  JSON.stringify([[{ id: 'g1', genre_name: 'Action', genre_type: 'genre' }], [{ source_id: 's1', source_type: 'Official', title: 'Publisher' }]]));
 
 rmSync(out, { recursive: true, force: true });
 if (fail) { console.error(`\n${fail} failed`); process.exit(1); }
