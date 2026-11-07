@@ -40,6 +40,28 @@ const chapters = [
   { id: 102, chapter_number: 2, volume_number: 1, chapter_title: 'Chapter 2', scanlator_name: 'Solo TL', language: 'en', date_added: stamp },
   { id: 101, chapter_number: 1, volume_number: 1, chapter_title: 'Chapter 1', group_name: 'Night Owls', language: 'en', date_added: stamp },
 ];
+// A series uploaded many times over, as popular ones are on the site.
+const later = '2026-07-01 00:00:00+00';
+const upload = (id, number, group, extra = {}) =>
+  ({ id, chapter_number: number, volume_number: null, language: 'en', date_added: stamp, ...group, ...extra });
+const alpha = { group_id: 1, group_name: 'Alpha' };
+const beta = { group_id: 2, group_name: 'Beta' };
+const noGroup = (uploader) => ({ group_id: 18021, group_name: 'No Group', uploader_id: uploader });
+const crowded = [
+  // Alpha has 1-6; Beta has 4-8, uploaded later; the official release has 1-2.
+  ...[1, 2, 3, 4, 5, 6].map((n) => upload(200 + n, n, alpha)),
+  ...[4, 5, 6, 7, 8].map((n) => upload(300 + n, n, beta, { date_added: later })),
+  ...[1, 2].map((n) => upload(400 + n, n, { group_id: 3, group_name: 'MANGA Plus' })),
+  // Spanish has groups of its own.
+  ...[1, 2].map((n) => upload(500 + n, n, { group_id: 4, group_name: 'Gamma' }, { language: 'es' })),
+  upload(510, 3, { group_id: 5, group_name: 'Delta' }, { language: 'es' }),
+  // "No Group" is no group: these are two uploaders.
+  upload(601, 9, noGroup('u1')),
+  upload(602, 9, noGroup('u2'), { date_added: later }),
+  // Uploads without a number are never merged.
+  upload(701, null, alpha, { chapter_title: 'Extra' }),
+  upload(702, null, beta, { chapter_title: 'Extra' }),
+];
 const site = { requests: [], totalPages: 3, mode: 'normal', genreFetches: 0 };
 const answer = (url) => {
   const p = url.pathname;
@@ -51,6 +73,8 @@ const answer = (url) => {
   if (p === '/api/manga/people-suggest') return { suggestions: ['Odagiri Hotaru', 'Oda Eiichiro'] };
   if (p === '/api/manga/7') return { manga: manga(7, { alt_titles: '["Alt Title","Title 7"]', banner_image: '/banners/7.webp', description: 'One &amp; two', artists: ['Bo'], is_adult: false, content_rating: 'safe' }) };
   if (p === '/api/manga/7/chapters/list') return chapters;
+  if (p === '/api/manga/8') return { manga: manga(8) };
+  if (p === '/api/manga/8/chapters/list') return crowded;
   if (/^\/api\/(?:chapters|uploads)\/\d+\/images$/.test(p)) return { images: [{ url: `${p}/1.webp` }, { url: 'https://cdn.example/2.webp' }, null] };
   throw new Error(`The fake site has no answer for ${p}`);
 };
@@ -85,7 +109,7 @@ globalThis.App = new Proxy({
 const load = (file) => require(path.join(out, file));
 const cheerio = require('cheerio');
 const { MangaDot } = load('src/MangaDot/MangaDot.js');
-const { parseSiteDate } = load('src/MangaDot/parsers.js');
+const { parseSiteDate, pickUploads } = load('src/MangaDot/parsers.js');
 const { Application, CloudflareError } = load('common/index.js');
 
 let fail = 0;
@@ -218,6 +242,13 @@ console.log('\nhome rows:');
     [weekly.request, weekly.page.results[0].subtitle, weekly.page.metadata],
     ['/api/manga/section?id=most_tracked&origin=JP&adult=0&range=weekly&limit=100', '★ 8.7', undefined]);
   t('  most viewed has no span on the site, so it stays paged', (await row('most_viewed')).page.metadata, { page: 2 });
+  const trending = await row('trending');
+  t('  trending is one list of up to 30, with no time range',
+    [trending.request, trending.page.results[0].subtitle, trending.page.metadata],
+    ['/api/manga/section?id=trending&origin=JP&adult=0&limit=30', '★ 8.7', undefined]);
+  t('  every row is shown until some are chosen, trending second',
+    (await source().getDiscoverSections()).map(({ id }) => id),
+    ['most_viewed', 'trending', 'top_rated', 'most_tracked', 'latest_updates', 'recently_added']);
   home.settings.set('visible_sections', ['latest_updates', 'top_rated']);
   t('  only the rows chosen are shown, in the site\'s order',
     (await home.getDiscoverSections()).map(({ id }) => id), ['top_rated', 'latest_updates']);
@@ -249,6 +280,41 @@ console.log('\nchapters and pages:');
   await source().getChapterDetails('7', '105');
   t('  after a restart the chapter list is read first, so the upload is still known',
     asked(), ['/api/manga/7', '/api/manga/7/chapters/list', '/api/uploads/105/images']);
+
+  const forgetChapterSettings = () => ['chapter_languages', 'chapter_uploads'].forEach((key) => state.delete(key));
+  const listed = async (settings) => {
+    forgetChapterSettings();
+    const instance = source(settings);
+    const list = await instance.getChapters('8');
+    return [...list].sort((a, b) => a.sortingIndex - b.sortingIndex).map(({ id }) => id);
+  };
+  t('  by default, English from one group per series: official first, then the group with the most, gaps from the next',
+    await listed(), ['701', '702', '401', '402', '203', '204', '205', '206', '307', '308', '602']);
+  t('  best upload per chapter: official first, then the newest',
+    await listed({ chapter_uploads: 'best' }), ['701', '702', '401', '402', '203', '304', '305', '306', '307', '308', '602']);
+  t('  every upload, as before', (await listed({ chapter_uploads: 'all' })).length, 17);
+  t('  another language keeps its own groups', await listed({ chapter_languages: ['es'] }), ['501', '502', '510']);
+  t('  no language chosen lists them all, each picked on its own', (await listed({ chapter_languages: [] })).length, 14);
+  t('  a series with nothing in the chosen languages lists every language',
+    await listed({ chapter_languages: ['fr'] }), await listed({ chapter_languages: [] }));
+  t('  an official release is known by any group credited, in any case', pickUploads([
+    { id: 1, chapter_number: 1, group_id: 9, group_name: 'Fans', language: 'en', date_added: later },
+    { id: 2, chapter_number: 1, group_id: 10, group_name: 'Joint', groups: [{ name: 'Fans' }, { name: 'viz media' }], language: 'en', date_added: stamp },
+  ], ['en'], 'best').map(({ id }) => id), [2]);
+  const whole = { group_id: 11, group_name: 'Manga UP!' };
+  const halves = { group_id: 12, group_name: 'Splitters' };
+  t('  a chapter one group splits in two is still one chapter: no second half after a whole one',
+    pickUploads([
+      upload(15, 15, whole), upload(17, 17, whole),
+      upload(115, 15, halves), upload(1155, 15.5, halves), upload(116, 16, halves), upload(1165, 16.5, halves), upload(117, 17, halves),
+    ], ['en'], 'group').map(({ id }) => id).sort((a, b) => a - b), [15, 17, 116, 1165]);
+
+  forgetChapterSettings();
+  const chapterSettings = source();
+  await chapterSettings.settings.load();
+  const rows = (await chapterSettings.getSettingsSections()).find(({ id }) => id === 'chapters').rows;
+  t('  the settings show English and one group per series until changed',
+    await Promise.all(rows.map((row) => row.value.get())), [['en'], ['group']]);
 
   t('  timestamps as the API writes them', [
     parseSiteDate('2026-06-01 12:34:56.123456+00')?.toISOString(),

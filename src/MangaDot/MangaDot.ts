@@ -29,10 +29,12 @@ import {
 
 import {
     ADULT_OPTIONS,
+    DEFAULT_LANGUAGES,
     DOMAIN,
     FIELDS,
     FILTERS,
     GENRES_MAX_AGE_MS,
+    LANGUAGE_OPTIONS,
     ORDER_OPTIONS,
     ORIGIN_OPTIONS,
     RANGED_SECTIONS,
@@ -46,6 +48,7 @@ import {
     STATUS_OPTIONS,
     TAG_GROUPS,
     TIME_RANGE_OPTIONS,
+    UPLOAD_OPTIONS,
     filterTag,
     splitFilterTag,
     tagGroupOf,
@@ -54,6 +57,7 @@ import {
     type SearchResponse,
     type SectionId,
     type TimeRange,
+    type UploadChoice,
 } from "./models";
 import {
     MangaDotInterceptor,
@@ -72,6 +76,7 @@ import {
     parseChapterPages,
     parseChapters,
     parseMangaDetails,
+    pickUploads,
     toCarouselItems,
     toFeaturedItems,
     toLatestItems,
@@ -82,7 +87,7 @@ import {
 export const MangaDotInfo = sourceInfo({
     name: "MangaDot",
     description: "Extension that pulls content from mangadot.net.",
-    version: "1.0.0",
+    version: "1.1.0",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DOMAIN,
@@ -92,6 +97,7 @@ export const MangaDotInfo = sourceInfo({
 });
 
 const ORIGIN_IDS: ReadonlySet<string> = new Set(ORIGIN_OPTIONS.map(({ id }) => id));
+const LANGUAGE_IDS: ReadonlySet<string> = new Set(LANGUAGE_OPTIONS.map(({ id }) => id));
 
 /** The site's origin parameter for the chosen content types; none chosen means all of them. */
 const originParam = (ids: string[]): string | undefined =>
@@ -164,6 +170,21 @@ export class MangaDot extends PopmangoSource {
         return visible.length > 0 ? visible : SECTION_IDS;
     }
 
+    /** English until languages are chosen; choosing none lists them all. */
+    private get chapterLanguages(): string[] {
+        return this.settings.get(STATE_KEYS.CHAPTER_LANGUAGES) === undefined
+            ? DEFAULT_LANGUAGES
+            : this.settings.stringArray(STATE_KEYS.CHAPTER_LANGUAGES, LANGUAGE_IDS);
+    }
+
+    private get chapterUploads(): UploadChoice {
+        return this.settings.choice(
+            STATE_KEYS.CHAPTER_UPLOADS,
+            UPLOAD_OPTIONS.map(({ id }) => id),
+            "group",
+        );
+    }
+
     override async getSettingsSections(): Promise<MenuSection[]> {
         // The tags come from the site; when it cannot be reached, the ones
         // already hidden stay listed so they can still be shown again.
@@ -231,6 +252,31 @@ export class MangaDot extends PopmangoSource {
                 ],
             },
             {
+                id: "chapters",
+                header: "Chapters",
+                footer:
+                    "A chapter is often uploaded several times, in several languages and by several groups. One " +
+                    "group per series keeps each series with the group that has the most of it, filling gaps " +
+                    "from the next; best upload takes the newest, chapter by chapter. Official releases come " +
+                    "first in both. Choosing no language lists them all, and a series with nothing in yours " +
+                    "lists every language.",
+                rows: [
+                    selectRow("chapter_languages", {
+                        label: "Languages",
+                        options: LANGUAGE_OPTIONS,
+                        multiple: true,
+                        get: () => this.chapterLanguages,
+                        set: (value) => this.settings.set(STATE_KEYS.CHAPTER_LANGUAGES, value),
+                    }),
+                    selectRow("chapter_uploads", {
+                        label: "Uploads",
+                        options: [...UPLOAD_OPTIONS],
+                        get: () => [this.chapterUploads],
+                        set: (value) => this.settings.set(STATE_KEYS.CHAPTER_UPLOADS, value[0] ?? "group"),
+                    }),
+                ],
+            },
+            {
                 id: "adult",
                 header: "Adult content",
                 footer: "Applies to search and the home page. A search can still choose otherwise.",
@@ -261,10 +307,15 @@ export class MangaDot extends PopmangoSource {
         const filters = { origin: originParam(this.sectionOrigins), adult: this.adult };
         const type = section.type === DiscoverSectionType.prominentCarousel ? "prominentCarouselItem" : "simpleCarouselItem";
 
-        // These two come as one list, so they have no further pages.
+        // These come as one list, so they have no further pages.
         if (id === SECTIONS.LATEST_UPDATES) {
             const data = await fetchSectionList(SECTIONS.LATEST_UPDATES, { ...filters, limit: 100 });
             return { items: toLatestItems(listOf(data.items, "latest updates")) };
+        }
+        // The site sends 30 at most, and has no time range for it.
+        if (id === SECTIONS.TRENDING) {
+            const data = await fetchSectionList(SECTIONS.TRENDING, { ...filters, limit: 30 });
+            return { items: toCarouselItems(listOf(data.items, "trending row"), type) };
         }
         if (RANGED_SECTIONS.has(id) && this.timeRange !== "all") {
             const data = await fetchSectionList(id, { ...filters, range: this.timeRange, limit: 100 });
@@ -402,7 +453,7 @@ export class MangaDot extends PopmangoSource {
                 this.trustedUploads.delete(String(entry.id));
             }
         }
-        return parseChapters(entries, sourceManga);
+        return parseChapters(pickUploads(entries, this.chapterLanguages, this.chapterUploads), sourceManga);
     }
 
     /**
