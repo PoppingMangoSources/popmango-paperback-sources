@@ -76,7 +76,7 @@ These sources have been converted and checked against Paperback 0.8’s availabl
 
 <!-- sources-08:start -->
 
-**24 sources available for Paperback 0.8.**
+**25 sources available for Paperback 0.8.**
 
 | Source | Site |
 | :----- | :--- |
@@ -91,6 +91,7 @@ These sources have been converted and checked against Paperback 0.8’s availabl
 | <img src="media/sources/mangacherri.png" width="22" align="top"/> **MangaCherri** | [mangacherri.com](https://mangacherri.com) |
 | <img src="media/sources/mangadot.png" width="22" align="top"/> **MangaDot** | [mangadot.net](https://mangadot.net) |
 | <img src="media/sources/mangago.png" width="22" align="top"/> **Mangago** | [mangago.me](https://www.mangago.me) |
+| <img src="media/sources/mangahere.png" width="22" align="top"/> **MangaHere** | [mangahere.cc](https://www.mangahere.cc) |
 | <img src="media/sources/mangatown.png" width="22" align="top"/> **MangaTown** | [mangatown.com](https://www.mangatown.com) |
 | <img src="media/sources/myreadingmanga.png" width="22" align="top"/> **MyReadingManga** | [myreadingmanga.info](https://myreadingmanga.info) |
 | <img src="media/sources/qiscans.png" width="22" align="top"/> **QiScans** | [qimanga.com](https://qimanga.com) |
