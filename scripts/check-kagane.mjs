@@ -30,11 +30,12 @@ let readerExp = 0;
 let readerFiles = FILES;
 let refuseIntegrity = 0;
 let refuseReader = 0;
+let readerFailure;
 let searchBody;
 const reply = (status, body) => ({ status, headers: { 'content-type': 'application/json' }, data: JSON.stringify(body), rawData: undefined });
 const schedule = async request => {
   await new Promise(resolve => setImmediate(resolve));
-  if (request.url === 'https://kagane.cx/') { asked.front++; return reply(200, {}); }
+  if (request.url === 'https://kagane.moe/') { asked.front++; return reply(200, {}); }
   if (request.url.endsWith('/api/integrity')) {
     asked.integrity++;
     if (refuseIntegrity > 0) { refuseIntegrity--; return reply(403, { error: 'no session' }); }
@@ -42,6 +43,7 @@ const schedule = async request => {
   }
   if (/\/api\/v2\/books\//.test(request.url)) {
     asked.reader++;
+    if (readerFailure) throw readerFailure;
     if (refuseReader > 0) { refuseReader--; return reply(403, { error: 'stale token' }); }
     return reply(200, {
       access_token: jwt(readerExp), cache_url: 'https://akari.kstatic.to',
@@ -87,7 +89,7 @@ let fail = 0;
 const t = (name, got, want) => { const ok = got === want; if (!ok) fail++;
   console.log(`${ok ? 'ok  ' : 'FAIL'}  ${name}${ok ? '' : `\n        got  ${got}\n        want ${want}`}`); };
 const reset = () => { for (const key of Object.keys(asked)) asked[key] = 0; };
-const site = 'https://kagane.cx';
+const site = 'https://kagane.moe';
 const now = Date.now();
 const tokenOf = url => new URL(url).searchParams.get('token');
 
@@ -98,7 +100,11 @@ t('  a token that is not a JWT is unreadable', tokenExpiry('opaque'), undefined)
 console.log('\nA page whose token is still good is left alone:');
 const good = pageUrl('https://akari.kstatic.to', CHAPTER, FILES[0], jwt(now + 600_000));
 reset();
+t('  current page path includes original quality', new URL(good).pathname, '/api/v2/books/page/original/' + CHAPTER + '/' + FILES[0]);
+t('  image quality is not a query parameter', new URL(good).searchParams.has('is_datasaver'), false);
 t('  same address', await freshPageUrl(site, good), good);
+const legacy = `https://akari.kstatic.to/api/v2/books/page/${CHAPTER}/${FILES[0]}?token=${jwt(now + 600_000)}&is_datasaver=false`;
+t('  an unexpired legacy page is migrated without a token request', await freshPageUrl(site, legacy), good);
 t('  nothing asked of the site', asked.reader + asked.integrity, 0);
 t('  an address that is not a page is untouched', await freshPageUrl(site, `${site}/api/v2/series/x`), `${site}/api/v2/series/x`);
 
@@ -129,10 +135,10 @@ t('  a page the new session no longer lists is an error', message, "Kagane chang
 
 console.log('\nThrough the interceptor:');
 readerFiles = FILES;
-const interceptor = new KaganeInterceptor(() => 'kagane.cx');
+const interceptor = new KaganeInterceptor(() => 'kagane.moe');
 const request = await interceptor.interceptRequest({ url: stale[1], method: 'GET', headers: {}, cookies: {} });
 t('  the page request goes out re-signed', tokenOf(request.url), jwt(readerExp));
-t('  with the site as referer', request.headers.referer, 'https://kagane.cx/');
+t('  with the site as referer', request.headers.referer, 'https://kagane.moe/');
 const failing = pageUrl('https://akari.kstatic.to', '01a11fa7-75e7-7369-a117-879a61b2b266', FILES[1], jwt(now - 1_000));
 readerFiles = [];
 const unchanged = await interceptor.interceptRequest({ url: failing, method: 'GET', headers: {}, cookies: {} });
@@ -148,6 +154,34 @@ refuseIntegrity = 1;
 reset();
 await freshPageUrl(site, pageUrl('https://akari.kstatic.to', refusedChapter, FILES[0], jwt(now - 1_000)));
 t('  loads the front page once and asks again', [asked.front, asked.integrity].join(), '1,2');
+
+console.log('\nCloudflare during image-token renewal:');
+const { CloudflareError } = load('common/Cloudflare.js');
+readerFailure = new CloudflareError({ url: `${site}/`, method: 'GET', headers: { 'user-agent': 'UA' } });
+let raised;
+try {
+  await interceptor.interceptRequest({
+    url: pageUrl('https://akari.kstatic.to', '01a11fa7-75e7-7369-a117-879a61b2b268', FILES[0], jwt(now - 1_000)),
+    method: 'GET', headers: {}, cookies: {},
+  });
+} catch (error) { raised = error; }
+t('  a real verification request is propagated instead of hidden', raised, readerFailure);
+readerFailure = undefined;
+
+console.log('\nSelected mirror and verification:');
+const { MIRRORS } = load('src/Kagane/models.js');
+t('  only moe and org are offered', MIRRORS.join(), 'kagane.moe,kagane.org');
+for (const host of [undefined, 'kagane.cx', 'kagane.si', 'kagane.net', 'kagane.org']) {
+  state.delete('kagane_mirror');
+  if (host !== undefined) state.set('kagane_mirror', host);
+  const source = restarted();
+  const bypass = await source.getCloudflareBypassRequestAsync();
+  const expected = host === 'kagane.org' ? host : 'kagane.moe';
+  t(`  ${host ?? 'unset'} verifies on the selected supported mirror`, bypass.url, `https://${expected}/`);
+  t('  bypass uses the same browser identity as requests', bypass.headers['user-agent'], 'UA');
+  t('  sharing uses that mirror too', source.getMangaShareUrl('series'), `https://${expected}/series/series`);
+}
+state.delete('kagane_mirror');
 
 console.log('\nRequest rates:');
 t('  page images at 6 a second, the site\'s API at 3', requestRates.join(), '6,3');

@@ -53,9 +53,12 @@ export class KaganeInterceptor extends PaperbackInterceptor {
         // CDN page requests still need the site as origin
         const site = `https://${mirrorOf(request.url) ?? this.mirror()}`;
 
-        // Re-sign expiring page tokens; if that fails, send the original unchanged
+        // Keep verification errors visible; a transient renewal failure can still use the old token.
         const url = isTrustedHost(hostOf(request.url).toLowerCase())
-            ? await freshPageUrl(`https://${this.mirror()}`, request.url).catch(() => request.url)
+            ? await freshPageUrl(`https://${this.mirror()}`, request.url).catch((error: unknown) => {
+                  if (error instanceof CloudflareError) throw error;
+                  return request.url;
+              })
             : request.url;
 
         return {
@@ -518,14 +521,14 @@ export function pageUrl(cacheUrl: string, chapterId: string, fileName: string, t
         .addPathComponent("v2")
         .addPathComponent("books")
         .addPathComponent("page")
+        .addPathComponent("original")
         .addPathComponent(chapterId)
         .addPathComponent(fileName)
         .setQueryItem("token", token)
-        .setQueryItem("is_datasaver", "false")
         .build();
 }
 
-const PAGE_PATH = /\/api\/v2\/books\/page\/([0-9a-f-]{36})\/([^/?#]+)\?(?:[^#]*&)?token=([^&#]+)/i;
+const PAGE_PATH = /^(https:\/\/[^/?#]+)\/api\/v2\/books\/page\/(?:original\/)?([0-9a-f-]{36})\/([^/?#]+)\?(?:[^#]*&)?token=([^&#]+)/i;
 
 const PAGE_TOKEN_MARGIN_MS = 30_000; // Leaves time for the download itself
 
@@ -547,20 +550,22 @@ export function tokenExpiry(token: string): number | undefined {
 // loading. Expiring pages get a renewed session, matched by file name since the CDN may change.
 export async function freshPageUrl(site: string, url: string, now = Date.now()): Promise<string> {
     const match = PAGE_PATH.exec(url);
-    const [, chapterId, fileName, token] = match ?? [];
-    if (chapterId === undefined || fileName === undefined || token === undefined) {
+    const [, cacheUrl, chapterId, fileName, token] = match ?? [];
+    if (cacheUrl === undefined || chapterId === undefined || fileName === undefined || token === undefined) {
         return url;
     }
 
-    const expiresAt = tokenExpiry(decodeURIComponent(token));
+    const decodedToken = decodeURIComponent(token);
+    const expiresAt = tokenExpiry(decodedToken);
     if (expiresAt === undefined || expiresAt - PAGE_TOKEN_MARGIN_MS > now) {
-        return url;
+        return pageUrl(cacheUrl, chapterId, fileName, decodedToken);
     }
 
     // Read before any await, so a concurrent page cannot start a second renewal
-    const pending = renewals.get(chapterId);
+    const key = `${site}:${chapterId}`;
+    const pending = renewals.get(key);
     let session = pending !== undefined ? await pending.catch(() => undefined) : undefined;
-    const newer = renewals.get(chapterId);
+    const newer = renewals.get(key);
     if (newer !== undefined && newer !== pending) {
         session = await newer.catch(() => undefined);
     }
@@ -572,15 +577,15 @@ export async function freshPageUrl(site: string, url: string, now = Date.now()):
             expiresAt: tokenExpiry(opened.access_token) ?? now + 2 * PAGE_TOKEN_MARGIN_MS,
             files: new Set((opened.manifest?.pages ?? []).map((page) => `${page.page_id}.${page.ext ?? "jxl"}`)),
         }));
-        renewals.delete(chapterId);
-        renewals.set(chapterId, renewal);
+        renewals.delete(key);
+        renewals.set(key, renewal);
         for (const key of renewals.keys()) {
             if (renewals.size <= RENEWAL_LIMIT) break;
             renewals.delete(key);
         }
         // Drop failures so the next page retries
         renewal.catch(() => {
-            if (renewals.get(chapterId) === renewal) renewals.delete(chapterId);
+            if (renewals.get(key) === renewal) renewals.delete(key);
         });
         session = await renewal;
     }

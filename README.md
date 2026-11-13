@@ -83,7 +83,7 @@ These sources have been converted and checked against Paperback 0.8’s availabl
 | <img src="media/sources/bunmanga.png" width="22" align="top"/> **BunManga** | [bunmanga.com](https://bunmanga.com) |
 | <img src="media/sources/chikari.png" width="22" align="top"/> **Chikari** | [chikari.moe](https://chikari.moe) |
 | <img src="media/sources/cocomic.png" width="22" align="top"/> **Cocomic** | [cocomic.co](https://cocomic.co) |
-| <img src="media/sources/kagane.png" width="22" align="top"/> **Kagane** | [kagane.cx](https://kagane.cx) |
+| <img src="media/sources/kagane.png" width="22" align="top"/> **Kagane** | [kagane.moe](https://kagane.moe) |
 | <img src="media/sources/kingofshojo.png" width="22" align="top"/> **King of Shojo** | [kingofshojo.com](https://kingofshojo.com) |
 | <img src="media/sources/likemanga.png" width="22" align="top"/> **LikeManga** | [likemanga.ink](https://likemanga.ink) |
 | <img src="media/sources/luacomic.png" width="22" align="top"/> **Lua Comic** | [luacomic.org](https://luacomic.org) |

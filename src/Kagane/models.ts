@@ -3,8 +3,8 @@
 
 import { DiscoverSectionType, type DiscoverSection, type Tag } from "../../common";
 
-export const MIRRORS = ["kagane.cx", "kagane.org", "kagane.si", "kagane.moe", "kagane.net"];
-export const DEFAULT_MIRROR = "kagane.cx";
+export const MIRRORS = ["kagane.moe", "kagane.org"];
+export const DEFAULT_MIRROR = "kagane.moe";
 export const DOMAIN = `https://${DEFAULT_MIRROR}`;
 
 const IMAGE_CDN = "kstatic.to";

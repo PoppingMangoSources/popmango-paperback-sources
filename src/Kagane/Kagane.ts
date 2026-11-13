@@ -2,8 +2,10 @@
 /* Copyright © 2026 Popmango */
 
 import type { CheerioAPI } from "cheerio";
+import type { Request } from "@paperback/types";
 
 import {
+    Application,
     Capability,
     CloudflareError,
     ContentRating,
@@ -101,8 +103,8 @@ import { HIDDEN_THEMES, POPULAR_TAGS, tagVariants } from "./tags";
 
 export const KaganeInfo = sourceInfo({
     name: "Kagane",
-    description: "Extension that pulls manga, manhwa, manhua and comics from kagane.cx.",
-    version: "5.0.4",
+    description: "Extension that pulls manga, manhwa, manhua and comics from kagane.moe.",
+    version: "5.0.5",
     icon: "icon.png",
     language: "Multi",
     websiteBaseURL: DOMAIN,
@@ -131,6 +133,16 @@ export class Kagane extends PopmangoSource {
             rateLimit: { numberOfRequests: 6, bufferInterval: 1 },
             apiRateLimit: { numberOfRequests: 3, bufferInterval: 1 },
             interceptor: new KaganeInterceptor(() => this.mirror),
+        });
+    }
+
+    // The base source stores a fixed domain; verification must follow the saved mirror.
+    override async getCloudflareBypassRequestAsync(): Promise<Request> {
+        await this.settings.load();
+        return Application.createRequest({
+            url: `${this.site}/`,
+            method: "GET",
+            headers: { "user-agent": await Application.getDefaultUserAgent() },
         });
     }
 
