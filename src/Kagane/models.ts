@@ -329,7 +329,8 @@ export interface SeriesDetails {
     genres?: Array<{ genre_id: string; genre_name: string; is_spoiler?: boolean | null }> | null;
     tags?: Array<{ tag_id: string; tag_name: string; is_spoiler?: boolean | null }> | null;
     series_alternate_titles?: Array<{ title: string }> | null;
-    series_covers?: Array<{ image_id: string }> | null;
+    series_covers?: Array<{ cover_id?: string | null; image_id: string; is_main?: boolean | null }> | null;
+    // Names an entry of series_covers, not an image
     main_cover_id?: string | null;
 }
 
