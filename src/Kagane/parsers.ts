@@ -26,7 +26,7 @@ import {
 } from "./models";
 
 export interface ViewOptions {
-    cover: (imageId: string | undefined, full?: boolean) => string;
+    cover: (imageId: string | undefined) => string;
     sourceNames?: Map<string, string>; // Set when titles show their upload source
     showSpoilerTags: boolean;
 }
@@ -220,7 +220,7 @@ export function toSourceManga(seriesId: string, details: SeriesDetails, view: Vi
         mangaInfo: {
             primaryTitle,
             secondaryTitles,
-            thumbnailUrl: view.cover(coverId ?? undefined, true),
+            thumbnailUrl: view.cover(coverId),
             synopsis: (details.description ?? "").replace(/\r/g, "").trim(),
             author: authors.join(", ") || undefined,
             artist: artists.join(", ") || undefined,

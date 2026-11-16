@@ -32,6 +32,7 @@ let refuseIntegrity = 0;
 let refuseReader = 0;
 let readerFailure;
 let searchBody;
+let seriesDetails;
 const reply = (status, body) => ({ status, headers: { 'content-type': 'application/json' }, data: JSON.stringify(body), rawData: undefined });
 const schedule = async request => {
   await new Promise(resolve => setImmediate(resolve));
@@ -64,6 +65,7 @@ const schedule = async request => {
     return reply(200, { sources: [{ source_id: 's1', source_type: 'Official', title: 'Publisher', created_at: 'unused' }] });
   }
   if (request.url.includes('/api/v2/search/series')) { searchBody = JSON.parse(request.data); return reply(200, { content: [], last: true }); }
+  if (request.url.endsWith('/api/v2/series/s1')) return reply(200, seriesDetails);
   throw new Error(`unexpected request ${request.url}`);
 };
 // One store for every instance, so a fresh load below is the app after a restart.
@@ -74,6 +76,7 @@ globalThis.App = {
   createRequestManager: options => { managers.push(options.requestsPerSecond); return { ...options, getDefaultUserAgent: async () => 'UA', schedule }; },
   createRequest: r => ({ ...r }), createCookie: c => c,
   createPagedResults: r => r, createPartialSourceManga: r => r, createTagSection: r => r, createTag: r => r,
+  createSourceManga: r => r, createMangaInfo: r => r,
 };
 const load = file => require(path.join(out, file));
 const { freshPageUrl, tokenExpiry, pageUrl, KaganeInterceptor } = load('src/Kagane/network.js');
@@ -223,21 +226,22 @@ t('  and kept across a restart', [asked.genres, asked.sources].join(), '0,0');
 t('  keeping only the fields used', JSON.stringify([state.get('kagane_genre_list').value, state.get('kagane_source_list').value]),
   JSON.stringify([[{ id: 'g1', genre_name: 'Action', genre_type: 'genre' }], [{ source_id: 's1', source_type: 'Official', title: 'Publisher' }]]));
 
-console.log('\nThe details cover is the main cover entry\'s image:');
+console.log('\nThe details cover is the main cover entry\'s image, compressed:');
 {
-  const { toSourceManga } = load('src/Kagane/parsers.js');
-  const { coverUrl } = load('src/Kagane/network.js');
-  const view = { cover: (id, full) => coverUrl(site, id, full ?? true), showSpoilerTags: false };
-  const cover = (covers, main) => toSourceManga('s', { title: 'T', series_covers: covers, main_cover_id: main }, view).mangaInfo.thumbnailUrl;
   // Shape as the site sends it, 2026-11-16: main_cover_id names a cover entry, whose image_id is what /image/ serves.
   const entries = [
     { cover_id: 'cover-2', image_id: 'image-2', is_main: false },
     { cover_id: 'cover-1', image_id: 'image-1', is_main: true },
   ];
-  t('  main_cover_id picks its entry\'s image, at full size', cover(entries, 'cover-1'), `${site}/api/v2/image/image-1`);
-  t('  never the entry id itself, which the site answers 404', cover(entries, 'cover-1').includes('cover-1'), false);
-  t('  without a match, the entry marked main', cover(entries, 'gone'), `${site}/api/v2/image/image-1`);
-  t('  without covers, the placeholder', cover([], 'cover-1'), `${site}/image/none.webp`);
+  const cover = async (covers, main) => {
+    seriesDetails = { title: 'T', series_covers: covers, main_cover_id: main };
+    return (await restarted().getMangaDetails('s1')).mangaInfo.image;
+  };
+  // The full-size copy is lossless WebP of up to ~2 MB; the tiles' compressed one is 50-80 KB.
+  t('  main_cover_id picks its entry\'s image, compressed as on the tiles', await cover(entries, 'cover-1'), `${site}/api/v2/image/image-1/compressed`);
+  t('  never the entry id itself, which the site answers 404', (await cover(entries, 'cover-1')).includes('cover-1'), false);
+  t('  without a match, the entry marked main', await cover(entries, 'gone'), `${site}/api/v2/image/image-1/compressed`);
+  t('  without covers, the placeholder', await cover([], 'cover-1'), `${site}/image/none.webp`);
 }
 
 rmSync(out, { recursive: true, force: true });

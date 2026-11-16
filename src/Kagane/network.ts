@@ -325,17 +325,15 @@ export function fetchBookIndex(site: string, seriesId: string): Promise<BookInde
     );
 }
 
-// Tiles use the compressed copy (~20x smaller). A missing cover gets a URL that 404s:
-// the app then draws its placeholder, whereas an empty URL blanks the whole row.
-export function coverUrl(site: string, imageId: string | undefined, full = false): string {
+// Always the compressed copy (~512px lossy WebP, 50-80 KB), the one tiles show. The full
+// one is lossless WebP of up to ~2 MB, and the app keeps a title's details cover for
+// History and the Library too. A missing cover gets a URL that 404s: the app then draws
+// its placeholder, whereas an empty URL blanks the whole row.
+export function coverUrl(site: string, imageId: string | undefined): string {
     if (!imageId) {
         return URL(site).addPathComponent("image").addPathComponent("none.webp").build();
     }
-    const url = URL(api(site)).addPathComponent("image").addPathComponent(imageId);
-    if (!full) {
-        url.addPathComponent("compressed");
-    }
-    return url.build();
+    return URL(api(site)).addPathComponent("image").addPathComponent(imageId).addPathComponent("compressed").build();
 }
 
 // One shared fetch per session; failures are dropped so the next caller retries.

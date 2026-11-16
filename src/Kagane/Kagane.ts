@@ -463,7 +463,7 @@ export class Kagane extends PopmangoSource {
     }
 
     async getMangaInfo(mangaId: string): Promise<SourceManga> {
-        const [details, view] = await Promise.all([fetchSeries(this.site, mangaId), this.view(true)]);
+        const [details, view] = await Promise.all([fetchSeries(this.site, mangaId), this.view()]);
         return toSourceManga(mangaId, details, view);
     }
 
@@ -534,12 +534,12 @@ export class Kagane extends PopmangoSource {
         return chosen.length > 0 ? chosen : SECTION_IDS;
     }
 
-    private async view(full = false): Promise<ViewOptions> {
+    private async view(): Promise<ViewOptions> {
         const showSource = this.settings.boolean(STATE_KEYS.SHOW_SOURCE_IN_TITLE, false);
         const sources = showSource ? await this.sourceList().catch(() => [] as UploadSource[]) : [];
 
         return {
-            cover: (imageId, wantFull) => coverUrl(this.site, imageId, wantFull ?? full),
+            cover: (imageId) => coverUrl(this.site, imageId),
             sourceNames: showSource ? new Map(sources.map((source) => [source.source_id, source.title])) : undefined,
             showSpoilerTags: this.settings.boolean(STATE_KEYS.SHOW_SPOILER_TAGS, false),
         };
