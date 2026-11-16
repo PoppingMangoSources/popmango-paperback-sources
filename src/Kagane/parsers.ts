@@ -171,7 +171,13 @@ export function toSourceManga(seriesId: string, details: SeriesDetails, view: Vi
             .filter((title) => title.length > 0 && title !== details.title.trim()),
     );
 
-    const coverId = details.main_cover_id ?? details.series_covers?.[0]?.image_id;
+    // main_cover_id is the cover entry's id; /image/ wants that entry's image_id
+    const covers = details.series_covers ?? [];
+    const mainCover =
+        covers.find((cover) => cover.cover_id === details.main_cover_id) ??
+        covers.find((cover) => cover.is_main === true) ??
+        covers[0];
+    const coverId = mainCover?.image_id;
 
     // Namespaced like the filters, so tapping a tag searches by it
     const genres: Tag[] = (details.genres ?? [])

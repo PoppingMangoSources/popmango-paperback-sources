@@ -223,6 +223,23 @@ t('  and kept across a restart', [asked.genres, asked.sources].join(), '0,0');
 t('  keeping only the fields used', JSON.stringify([state.get('kagane_genre_list').value, state.get('kagane_source_list').value]),
   JSON.stringify([[{ id: 'g1', genre_name: 'Action', genre_type: 'genre' }], [{ source_id: 's1', source_type: 'Official', title: 'Publisher' }]]));
 
+console.log('\nThe details cover is the main cover entry\'s image:');
+{
+  const { toSourceManga } = load('src/Kagane/parsers.js');
+  const { coverUrl } = load('src/Kagane/network.js');
+  const view = { cover: (id, full) => coverUrl(site, id, full ?? true), showSpoilerTags: false };
+  const cover = (covers, main) => toSourceManga('s', { title: 'T', series_covers: covers, main_cover_id: main }, view).mangaInfo.thumbnailUrl;
+  // Shape as the site sends it, 2026-11-16: main_cover_id names a cover entry, whose image_id is what /image/ serves.
+  const entries = [
+    { cover_id: 'cover-2', image_id: 'image-2', is_main: false },
+    { cover_id: 'cover-1', image_id: 'image-1', is_main: true },
+  ];
+  t('  main_cover_id picks its entry\'s image, at full size', cover(entries, 'cover-1'), `${site}/api/v2/image/image-1`);
+  t('  never the entry id itself, which the site answers 404', cover(entries, 'cover-1').includes('cover-1'), false);
+  t('  without a match, the entry marked main', cover(entries, 'gone'), `${site}/api/v2/image/image-1`);
+  t('  without covers, the placeholder', cover([], 'cover-1'), `${site}/image/none.webp`);
+}
+
 rmSync(out, { recursive: true, force: true });
 if (fail) { console.error(`\n${fail} failed`); process.exit(1); }
 console.log('\nall passed');
