@@ -5,7 +5,8 @@
 // records every request: how the shared base class finds a chapter it is only
 // given the ids of, with XCOMIC's chapterFromIds hook and with a source that
 // has none, and where paging stops now that a full page stands in for the
-// site's own next-page answer. The real common/ and src/XCOMIC/ are transpiled
+// site's own next-page answer, and which mirrors a request moves on to when the
+// one it starts at fails. The real common/ and src/XCOMIC/ are transpiled
 // into tmp/, where their packages still resolve, and the app's App.* factories
 // hand back what they are given.
 
@@ -30,7 +31,9 @@ for (const dir of ['common', 'src/XCOMIC']) {
 // --- the fake site -------------------------------------------------------------
 // Every XCOMIC query is a POST, which the runtime never reuses, so each one the
 // source makes is recorded here: browse pages by number, the rest by name.
-const site = { total: 0, hidden: new Set(), requests: [] };
+// A mirror listed in `statuses` fails with that status instead of answering;
+// `hosts` records every mirror asked, in order.
+const site = { total: 0, hidden: new Set(), requests: [], statuses: {}, hosts: [] };
 const title = (n) => ({
   data: { id: `t${n}`, name: `Title ${n}`, urlCover: site.hidden.has(n) ? '' : `/covers/${n}.jpg`, type: 'manhwa' },
   comicNodes: [{ data: { id: `c${n}`, name: `Title ${n}`, translatedLanguage: 'en', chaps_normal: 3 } }],
@@ -66,6 +69,14 @@ globalThis.App = new Proxy({
     getDefaultUserAgent: async () => 'Test',
     schedule: async (request) => {
       const sent = await interceptor.interceptRequest(request);
+      const origin = new URL(sent.url).origin;
+      site.hosts.push(origin);
+      const status = site.statuses[origin];
+      if (status !== undefined) {
+        // What the site sends a bodiless GET, as following a redirect leaves the POST.
+        const data = status === 400 ? '{"errors":[{"message":"Internal Server Error","extensions":{"code":"BAD_REQUEST"}}]}' : '';
+        return interceptor.interceptResponse({ status, headers: { 'content-type': 'application/json' }, data, request: sent });
+      }
       const data = JSON.stringify({ data: answer(JSON.parse(sent.data)) });
       return interceptor.interceptResponse({ status: 200, headers: { 'content-type': 'application/json' }, data, request: sent });
     },
@@ -76,7 +87,7 @@ const load = (file) => require(path.join(out, file));
 const cheerio = require('cheerio');
 const { PopmangoSource } = load('common/index.js');
 const { XCOMIC } = load('src/XCOMIC/XCOMIC.js');
-const { HOME_ROW_SIZE, PAGE_SIZE, SECTIONS } = load('src/XCOMIC/models.js');
+const { HOME_ROW_SIZE, MIRROR_IDS, PAGE_SIZE, SECTIONS } = load('src/XCOMIC/models.js');
 
 let fail = 0;
 const t = (name, got, want) => {
@@ -203,6 +214,44 @@ console.log(`\nPaging a home row, ${HOME_ROW_SIZE} to a page, the same way:`);
     await walk(HOME_ROW_SIZE + 6, row), { shown: HOME_ROW_SIZE + 6, asked: pages(1, 2), more: false });
   t('  ending exactly on a full page: one empty request, then it stops',
     await walk(HOME_ROW_SIZE * 2, row), { shown: HOME_ROW_SIZE * 2, asked: pages(1, 2, 3), more: false });
+}
+
+// --- mirrors ---------------------------------------------------------------------
+// yona.to and xcomic.net now only redirect to comik.to. Following that turns
+// the POST into a GET without its body, which comik.to answers with 400, so a
+// 400 is what the source gets back from them.
+console.log('\nMoving to another mirror when the one a request starts at fails:');
+const choose = (source, mirror) =>
+  source.getSettingsSections().find((section) => section.id === 'mirror')
+    .rows.find((row) => row.id === 'base_url').value.set([mirror]);
+const openChapter = async (source, statuses) => {
+  Object.assign(site, { statuses, hosts: [] });
+  let error = '';
+  try { await source.getChapterDetails('m1', '/comic/m1/chapter/52-ch-2'); } catch (e) { error = e.message; }
+  return { hosts: site.hosts, error };
+};
+{
+  const xcomic = fresh();
+  await choose(xcomic, 'https://yona.to');
+  t('  the chosen mirror answers 400, as a redirected one does: the next is asked',
+    await openChapter(xcomic, { 'https://yona.to': 400 }), { hosts: ['https://yona.to', 'https://xcomic.me'], error: '' });
+  t('  and the next request starts at the mirror that answered',
+    await openChapter(xcomic, { 'https://yona.to': 400 }), { hosts: ['https://xcomic.me'], error: '' });
+}
+{
+  const xcomic = fresh();
+  await choose(xcomic, 'https://comik.to');
+  t('  the chosen mirror is down (502): the next is asked',
+    await openChapter(xcomic, { 'https://comik.to': 502 }), { hosts: ['https://comik.to', 'https://xcomic.me'], error: '' });
+}
+{
+  const xcomic = fresh();
+  t('  a 404 is the same on every mirror, so no other is asked',
+    await openChapter(xcomic, { 'https://xcomic.me': 404 }),
+    { hosts: ['https://xcomic.me'], error: 'XCOMIC answered 404 on https://xcomic.me.' });
+  t('  every mirror failing: each is asked once, and the last answer is the error',
+    await openChapter(xcomic, Object.fromEntries(MIRROR_IDS.map((mirror) => [mirror, 400]))),
+    { hosts: MIRROR_IDS, error: 'XCOMIC answered 400 on https://comik.to.' });
 }
 
 rmSync(out, { recursive: true, force: true });
