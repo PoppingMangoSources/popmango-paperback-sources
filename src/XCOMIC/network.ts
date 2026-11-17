@@ -43,10 +43,14 @@ import {
 /**
  * Statuses worth trying another mirror for.
  *
+ * 400 is what a mirror that has become a redirect answers. yona.to and
+ * xcomic.net now send everything to comik.to, and following that turns the
+ * query's POST into a GET without its body, which the site refuses.
+ *
  * A 404 is not among them: every mirror serves the same catalogue, so a title
  * missing from one is missing from all.
  */
-const RETRYABLE_STATUS = new Set([403, 408, 500, 502, 503, 504, 521, 522, 523, 524]);
+const RETRYABLE_STATUS = new Set([400, 403, 408, 500, 502, 503, 504, 521, 522, 523, 524]);
 
 /** What the client needs from the source's settings. */
 export interface MirrorSettings {
