@@ -7,8 +7,6 @@ import { DiscoverSectionType, type DiscoverSection, type Tag } from "../../commo
 /** Every host serving the same catalogue; the first is the default. */
 export const MIRRORS: Tag[] = [
     { id: "https://xcomic.me", title: "xcomic.me" },
-    { id: "https://xcomic.net", title: "xcomic.net" },
-    { id: "https://yona.to", title: "yona.to" },
     { id: "https://comik.to", title: "comik.to" },
 ];
 export const MIRROR_IDS = MIRRORS.map((mirror) => mirror.id);

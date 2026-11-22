@@ -137,8 +137,8 @@ console.log('\nisComicAllowed — what the reader has ruled out:');
 // --- titles and cards --------------------------------------------------------
 console.log('\nXComicParser — titles and cards:');
 {
-  const shown = new p.XComicParser({ baseUrl: 'https://yona.to', showEditionInTitle: true });
-  const hidden = new p.XComicParser({ baseUrl: 'https://yona.to', showEditionInTitle: false });
+  const shown = new p.XComicParser({ baseUrl: 'https://comik.to', showEditionInTitle: true });
+  const hidden = new p.XComicParser({ baseUrl: 'https://comik.to', showEditionInTitle: false });
 
   t('  the edition is appended when asked',
     shown.searchResult({ data: comic({ subName: 'Team X' }) }).title, 'A Title (Team X)');
@@ -149,7 +149,7 @@ console.log('\nXComicParser — titles and cards:');
   t('  a team already in the name is not repeated',
     shown.searchResult({ data: comic({ name: 'Work [Good Scans]' }) }).title, 'Work [Good Scans]');
   t('  covers resolve against the active mirror',
-    shown.searchResult({ data: comic() }).imageUrl, 'https://yona.to/cover.jpg');
+    shown.searchResult({ data: comic() }).imageUrl, 'https://comik.to/cover.jpg');
   t('  entities in a title are decoded',
     hidden.searchResult({ data: comic({ name: 'Tom &amp; Jerry' }) }).title, 'Tom & Jerry');
   t('  the card subtitle names chapters and type',

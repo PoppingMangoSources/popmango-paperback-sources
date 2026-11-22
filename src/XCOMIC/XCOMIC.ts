@@ -76,7 +76,7 @@ import { XComicParser, isComicAllowed, toLatestUploadNodes, toPreferredTitleSour
 export const XCOMICInfo = sourceInfo({
     name: "XCOMIC",
     description: "Extension that pulls content from xcomic.me.",
-    version: "1.1.4",
+    version: "1.1.5",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DOMAIN,
@@ -116,7 +116,7 @@ export class XCOMIC extends PopmangoSource {
                 id: "mirror",
                 header: "Mirror",
                 footer:
-                    "All four sites share one catalogue. When the chosen one is down, requests move to " +
+                    "Both sites share one catalogue. When the chosen one is down, requests move to " +
                     "another on their own.",
                 rows: [
                     selectRow("base_url", {
@@ -652,7 +652,7 @@ export class XCOMIC extends PopmangoSource {
         filters: SearchFilters,
     ): Promise<PagedResults<SearchResultItem> | undefined> {
         const match =
-            /^https?:\/\/(?:www\.)?(?:xcomic\.(?:me|net)|yona\.to|comik\.to)\/(source|comic|title)\/([a-zA-Z0-9]+)/i.exec(
+            /^https?:\/\/(?:www\.)?(?:xcomic\.me|comik\.to)\/(source|comic|title)\/([a-zA-Z0-9]+)/i.exec(
                 title,
             );
         const kind = match?.[1];

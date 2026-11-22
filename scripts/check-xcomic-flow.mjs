@@ -62,8 +62,9 @@ const answer = ({ query, variables }) => {
   }
 };
 
+let savedSettings = {};
 globalThis.App = new Proxy({
-  createSourceStateManager: () => ({ retrieve: async () => undefined, store: async () => {} }),
+  createSourceStateManager: () => ({ retrieve: async (key) => savedSettings[key], store: async () => {} }),
   // Requests go through the source's own interceptor chain, as the app sends them.
   createRequestManager: ({ interceptor }) => ({
     getDefaultUserAgent: async () => 'Test',
@@ -87,7 +88,7 @@ const load = (file) => require(path.join(out, file));
 const cheerio = require('cheerio');
 const { PopmangoSource } = load('common/index.js');
 const { XCOMIC } = load('src/XCOMIC/XCOMIC.js');
-const { HOME_ROW_SIZE, MIRROR_IDS, PAGE_SIZE, SECTIONS } = load('src/XCOMIC/models.js');
+const { HOME_ROW_SIZE, MIRROR_IDS, PAGE_SIZE, SECTIONS, STATE_KEYS } = load('src/XCOMIC/models.js');
 
 let fail = 0;
 const t = (name, got, want) => {
@@ -217,9 +218,6 @@ console.log(`\nPaging a home row, ${HOME_ROW_SIZE} to a page, the same way:`);
 }
 
 // --- mirrors ---------------------------------------------------------------------
-// yona.to and xcomic.net now only redirect to comik.to. Following that turns
-// the POST into a GET without its body, which comik.to answers with 400, so a
-// 400 is what the source gets back from them.
 console.log('\nMoving to another mirror when the one a request starts at fails:');
 const choose = (source, mirror) =>
   source.getSettingsSections().find((section) => section.id === 'mirror')
@@ -230,13 +228,49 @@ const openChapter = async (source, statuses) => {
   try { await source.getChapterDetails('m1', '/comic/m1/chapter/52-ch-2'); } catch (e) { error = e.message; }
   return { hosts: site.hosts, error };
 };
+t('  only supported mirrors are offered', MIRROR_IDS, ['https://xcomic.me', 'https://comik.to']);
+{
+  const row = fresh().getSettingsSections().find((section) => section.id === 'mirror').rows[0];
+  t('  the native mirror selector offers only those hosts', row.options, ['https://xcomic.me', 'https://comik.to']);
+}
+for (const retired of ['https://yona.to', 'https://xcomic.net']) {
+  for (const [preferred, active, expected] of [
+    [retired, retired, 'https://xcomic.me'],
+    ['https://comik.to', retired, 'https://comik.to'],
+    [retired, 'https://comik.to', 'https://comik.to'],
+  ]) {
+    savedSettings = { [STATE_KEYS.BASE_URL]: preferred, [STATE_KEYS.ACTIVE_BASE_URL]: active };
+    const xcomic = fresh();
+    const result = await openChapter(xcomic, {});
+    savedSettings = {};
+    t(`  saved ${preferred}, last working ${active}: only a supported host is requested`,
+      result, { hosts: [expected], error: '' });
+    t('  sharing uses the supported active host', xcomic.getMangaShareUrl('m1'), `${expected}/comic/m1`);
+    const row = xcomic.getSettingsSections().find((section) => section.id === 'mirror').rows[0];
+    t('  the selected value is supported', await row.value.get(),
+      [preferred === retired ? 'https://xcomic.me' : preferred]);
+  }
+}
 {
   const xcomic = fresh();
-  await choose(xcomic, 'https://yona.to');
-  t('  the chosen mirror answers 400, as a redirected one does: the next is asked',
-    await openChapter(xcomic, { 'https://yona.to': 400 }), { hosts: ['https://yona.to', 'https://xcomic.me'], error: '' });
+  for (const host of ['xcomic.me', 'comik.to', 'www.comik.to']) {
+    site.requests = [];
+    const result = await xcomic.getSearchResults({ title: `https://${host}/comic/m1`, includedTags: [], excludedTags: [], parameters: {} });
+    t(`  a pasted ${host} comic opens directly`, [site.requests, result.results[0]?.mangaId], [['get_comicNode'], 'm1']);
+  }
+  for (const host of ['yona.to', 'xcomic.net']) {
+    site.requests = [];
+    await xcomic.getSearchResults({ title: `https://${host}/comic/m1`, includedTags: [], excludedTags: [], parameters: {} });
+    t(`  a pasted ${host} URL is no longer a supported comic link`, site.requests, ['page 1']);
+  }
+}
+{
+  const xcomic = fresh();
+  await choose(xcomic, 'https://comik.to');
+  t('  the chosen mirror answers 400: the next is asked',
+    await openChapter(xcomic, { 'https://comik.to': 400 }), { hosts: ['https://comik.to', 'https://xcomic.me'], error: '' });
   t('  and the next request starts at the mirror that answered',
-    await openChapter(xcomic, { 'https://yona.to': 400 }), { hosts: ['https://xcomic.me'], error: '' });
+    await openChapter(xcomic, { 'https://comik.to': 400 }), { hosts: ['https://xcomic.me'], error: '' });
 }
 {
   const xcomic = fresh();
