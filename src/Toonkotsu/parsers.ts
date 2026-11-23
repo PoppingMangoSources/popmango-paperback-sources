@@ -361,14 +361,13 @@ const groupNames = (release: ChapterRelease, shown: string | undefined): string[
 /**
  * Every chapter, one upload per group.
  *
- * A group's best upload of each chapter is kept, its widest and then largest,
- * as the site's chapter list does; choosing the smallest keeps its lightest
- * instead. With mainOnly only one upload of each chapter is kept: one from the
- * first preferred group that has it, as the upload choice picks among that
- * group's, and otherwise the one the site lists first, or with the smallest
- * choice the lightest of them all. Hidden groups' uploads are left out either
- * way. With showSize a group's uploads of different sizes stay apart, each
- * with its size in the title. Complete uploads always win over partial ones.
+ * A group's best upload of each chapter is kept, its widest and then largest;
+ * choosing the smallest keeps its lightest instead. With mainOnly only one
+ * upload of each chapter is kept: the best of the first preferred group that
+ * has it, otherwise the best of them all. Hidden groups' uploads are left out
+ * either way. With showSize a group's uploads of different sizes stay apart,
+ * each with its size in the title. Complete uploads always win over partial
+ * ones, and equal uploads go to the newer, then the higher id.
  *
  * 0.9 renumbers same-numbered chapters in different volumes, because it merges
  * chapters that share a number. 0.8 lists every chapter by its own id, so the
@@ -390,15 +389,13 @@ export const parseChapters = (
 
     const releases = chapters
         .flatMap((entry, position) =>
-            [entry, ...(entry.alts ?? [])].map((release, index) => ({
+            [entry, ...(entry.alts ?? [])].map((release) => ({
                 ...release,
                 n: entry.n,
                 vol: entry.vol,
                 label: release.label ?? entry.label,
                 at: release.at ?? entry.at,
                 canonicalId: entry.id,
-                catalogueDefault: index === 0,
-                listed: index,
                 position,
             })),
         )
@@ -427,38 +424,26 @@ export const parseChapters = (
 
     const selected = new Map<string, { release: Release; order: number }>();
     // Prefer complete uploads, then the widest and largest (or the lightest,
-    // then the widest), then catalogue defaults, position and ID. An upload of
-    // unknown size counts as the heaviest.
+    // then the widest), then the newest and the highest id, so the same list
+    // always gives the same pick. An upload of unknown size counts as the
+    // heaviest. Page counts are not compared: the same chapter comes cut into
+    // 23 images or 261, so more pages means finer cutting, not more chapter.
+    // Nor is the upload the site lists first, which is no better than the rest.
     const compareSize = (a: Release, b: Release): number =>
         smallest
             ? (a.mb ?? Infinity) - (b.mb ?? Infinity) || (b.w ?? 0) - (a.w ?? 0)
             : (b.w ?? 0) - (a.w ?? 0) || (b.mb ?? 0) - (a.mb ?? 0);
     const compareReleases = (a: Release, b: Release): number =>
-        Number(!!a.partial) - Number(!!b.partial) ||
-        compareSize(a, b) ||
-        Number(b.catalogueDefault) - Number(a.catalogueDefault) ||
-        a.position - b.position ||
-        a.id - b.id;
+        Number(!!a.partial) - Number(!!b.partial) || compareSize(a, b) || (b.at ?? 0) - (a.at ?? 0) || b.id - a.id;
     const complete = new Set(releases.filter((release) => !release.partial).map(chapterKey));
 
-    // One per Chapter: the first preferred group that has the chapter, choosing
-    // among its uploads as the upload choice says; otherwise the upload the
-    // site lists first, or with the smallest choice the lightest of all.
+    // One per Chapter: the best upload of the first preferred group that has
+    // the chapter, otherwise the best of all.
     const preferenceOf = (release: Release): number =>
         Math.min(Infinity, ...release.names.map((name) => preference.get(name) ?? Infinity));
-    const siteOrder = (a: Release, b: Release): number =>
-        Number(b.catalogueDefault) - Number(a.catalogueDefault) || a.position - b.position || a.listed - b.listed;
-    const compareForChapter = (a: Release, b: Release): number => {
-        const preferred = preferenceOf(a);
-        // Two unpreferred uploads give NaN here, which falls through like a tie.
-        const rank = preferred - preferenceOf(b);
-        if (rank) {
-            return rank;
-        }
-        return smallest || preferred !== Infinity
-            ? compareReleases(a, b)
-            : Number(!!a.partial) - Number(!!b.partial) || siteOrder(a, b);
-    };
+    // Two unpreferred uploads give NaN, which falls through like a tie.
+    const compareForChapter = (a: Release, b: Release): number =>
+        preferenceOf(a) - preferenceOf(b) || compareReleases(a, b);
 
     for (const release of releases) {
         const key = chapterKey(release);

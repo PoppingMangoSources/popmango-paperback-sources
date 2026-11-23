@@ -138,15 +138,29 @@ const series = { chapters: [
 ] };
 const ids = (options, from = series) => parseChapters(from, { mangaId: 'x' }, { showSize: false, ...options }).map(ch => ch.chapterId).join(',');
 t('  Best Quality keeps each group\'s widest', ids({ mainOnly: false }), '3,33,2');
-t('  Best Quality + Deduplicate keeps the first listed', ids({ mainOnly: true }), '3,2');
+t('  Best Quality + Deduplicate keeps each chapter\'s widest', ids({ mainOnly: true }), '3,2');
 t('  Smallest keeps each group\'s lightest', ids({ mainOnly: false, choice: 'smallest' }), '3,33,22');
 t('  Smallest + Deduplicate keeps each chapter\'s lightest', ids({ mainOnly: true, choice: 'smallest' }), '33,22');
+// As on the site: the upload listed first is no better than the rest, and the
+// same chapter comes cut into very different numbers of images.
+const ranked = { chapters: [
+  { id: 7, n: 7, label: 'Chapter 7', group: { slug: 'a', name: 'A' }, w: 720, mb: 9, pages: 20, at: 3000, alts: [
+    { id: 71, group: { slug: 'b', name: 'B' }, w: 1200, mb: 15, pages: 26, at: 1000 },
+    { id: 72, group: { slug: 'c', name: 'C' }, w: 1200, mb: 15, pages: 240, at: 2000 },
+    { id: 73, group: { slug: 'd', name: 'D' }, w: 1200, mb: 15, pages: 26, at: 2000 },
+    { id: 74, group: { slug: 'b', name: 'B' }, w: 1200, mb: 15, pages: 26, at: 1500 }] },
+] };
+t('  One per Chapter takes the best of any group, not the upload the site lists first', ids({ mainOnly: true }, ranked), '73');
+t('  equal uploads go to the newer one, whatever their page counts', ids({ mainOnly: true, hiddenGroups: ['d'] }, ranked), '72');
+t('  and equally new ones to the higher id, so the pick never wavers', ids({ mainOnly: true }, ranked), '73');
+t('  One per Group keeps each group\'s newer upload of two equal ones', ids({ mainOnly: false }, ranked), '7,74,72,73');
+t('  One per Chapter with Smallest Download takes the lightest', ids({ mainOnly: true, choice: 'smallest' }, ranked), '7');
 
 console.log('\ngroups:');
 t('  a hidden group\'s uploads are left out', ids({ mainOnly: false, hiddenGroups: ['b'] }), '3,2');
-t('  One per Chapter takes the next upload when the site\'s first is hidden, and drops a chapter only hidden groups have',
+t('  One per Chapter takes another group\'s upload when the best one is hidden, and drops a chapter only hidden groups have',
   ids({ mainOnly: true, hiddenGroups: ['a'] }), '33');
-t('  One per Chapter takes a preferred group\'s upload, else the site\'s first', ids({ mainOnly: true, preferredGroups: ['b'] }), '33,2');
+t('  One per Chapter takes a preferred group\'s upload, else the best of any', ids({ mainOnly: true, preferredGroups: ['b'] }), '33,2');
 t('  preferred groups count in list order, and Upload Choice picks among the group\'s own uploads',
   ids({ mainOnly: true, preferredGroups: ['b', 'a'], choice: 'smallest' }), '33,22');
 t('  with no preferred group having a chapter, Smallest Download still takes the lightest',
@@ -159,7 +173,7 @@ const named = { chapters: [
 t('  a group is matched by the name shown or by its slug', [
   ids({ mainOnly: true, preferredGroups: ['night owls'] }, named), ids({ mainOnly: true, preferredGroups: ['night-owls'] }, named)].join(' '), '5 5');
 t('  and by a name the site only gives in brackets', ids({ mainOnly: true, preferredGroups: ['moon tl'] }, named), '55');
-t('  a preferred group\'s partial upload still loses to a complete one', ids({ mainOnly: true, preferredGroups: ['sun'] }, named), '5');
+t('  a preferred group\'s partial upload still loses to the complete ones', ids({ mainOnly: true, preferredGroups: ['sun'] }, named), '55');
 let hiddenAll = '';
 try { ids({ mainOnly: false, hiddenGroups: ['a', 'b'] }); } catch (error) { hiddenAll = error.message; }
 t('  hiding every group says so, rather than reporting no chapters', /Hidden Groups/.test(hiddenAll), true);
