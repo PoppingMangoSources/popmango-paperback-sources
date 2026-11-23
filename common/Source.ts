@@ -258,6 +258,18 @@ export abstract class PopmangoSource
         return undefined;
     }
 
+    /**
+     * The series a chapter list is built from, for one the app asks chapters
+     * of without having opened it this session.
+     *
+     * A library update does that for every title, so a source whose chapter
+     * list needs nothing beyond the id can return one here and spare a details
+     * request per title. `undefined`, the default, fetches the details.
+     */
+    protected mangaForChapterList(_mangaId: string): SourceManga | undefined {
+        return undefined;
+    }
+
     // ---------------------------------------------------------------------
     // What the app calls
     // ---------------------------------------------------------------------
@@ -273,13 +285,16 @@ export abstract class PopmangoSource
      * series so its parsers can reuse what the details page already said. The
      * details are taken from the previous call when they are for this series —
      * which is the normal case, since the app opens the details screen first —
-     * and fetched otherwise.
+     * and otherwise fetched, unless the source can do without them
+     * (`mangaForChapterList`).
      */
     async getChapters(mangaId: string): Promise<RuntimeChapter[]> {
         return this.guard(async () => {
-            const manga =
-                this.lastManga?.mangaId === mangaId ? this.lastManga : await this.getMangaInfo(mangaId);
-            this.lastManga = manga;
+            let manga = this.lastManga?.mangaId === mangaId ? this.lastManga : this.mangaForChapterList(mangaId);
+            if (manga === undefined) {
+                manga = await this.getMangaInfo(mangaId);
+                this.lastManga = manga;
+            }
 
             const chapters = await this.getChapterList(manga);
             // An empty list makes the app drop the title's reading progress

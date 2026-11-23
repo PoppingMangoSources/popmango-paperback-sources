@@ -279,7 +279,19 @@ console.log('\nchapters and pages:');
   site.requests = [];
   await source().getChapterDetails('7', '105');
   t('  after a restart the chapter list is read first, so the upload is still known',
-    asked(), ['/api/manga/7', '/api/manga/7/chapters/list', '/api/uploads/105/images']);
+    asked(), ['/api/manga/7/chapters/list', '/api/uploads/105/images']);
+
+  site.requests = [];
+  const updating = source();
+  const updated = await Promise.all(['7', '8'].map((id) => updating.getChapters(id)));
+  t('  a library update asks for each title\'s chapter list alone, not its details first',
+    [asked().sort(), updated.map((chapters) => chapters.length > 0)],
+    [['/api/manga/7/chapters/list', '/api/manga/8/chapters/list'], [true, true]]);
+  site.requests = [];
+  const opened = source();
+  await opened.getMangaDetails('7');
+  await opened.getChapters('7');
+  t('  opening a title still asks for its details once, then the list', asked(), ['/api/manga/7', '/api/manga/7/chapters/list']);
 
   const forgetChapterSettings = () => ['chapter_languages', 'chapter_uploads'].forEach((key) => state.delete(key));
   const listed = async (settings) => {

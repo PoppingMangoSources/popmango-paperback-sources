@@ -87,7 +87,7 @@ import {
 export const MangaDotInfo = sourceInfo({
     name: "MangaDot",
     description: "Extension that pulls content from mangadot.net.",
-    version: "1.1.0",
+    version: "1.1.1",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DOMAIN,
@@ -442,6 +442,25 @@ export class MangaDot extends PopmangoSource {
 
     async getMangaInfo(mangaId: string): Promise<SourceManga> {
         return parseMangaDetails(await fetchManga(mangaId), mangaId);
+    }
+
+    /**
+     * The chapter list and the pages need only the series id, so a library
+     * update asks the site for each title's chapter list alone rather than its
+     * details first, which halves its requests at the rate limit.
+     */
+    protected override mangaForChapterList(mangaId: string): SourceManga {
+        return {
+            mangaId,
+            mangaInfo: {
+                primaryTitle: "",
+                secondaryTitles: [],
+                thumbnailUrl: "",
+                synopsis: "",
+                status: "Unknown",
+                contentRating: ContentRating.MATURE,
+            },
+        };
     }
 
     async getChapterList(sourceManga: SourceManga): Promise<Chapter[]> {
