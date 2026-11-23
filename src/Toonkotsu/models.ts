@@ -23,7 +23,18 @@ export const STATE_KEYS = {
     DEDUPLICATE_CHAPTERS: "toonkotsu_deduplicate_chapters",
     UPLOAD_CHOICE: "toonkotsu_upload_choice",
     SHOW_UPLOAD_SIZE: "toonkotsu_show_upload_size",
+    HIDDEN_GROUPS: "toonkotsu_hidden_groups",
+    PREFERRED_GROUPS: "toonkotsu_preferred_groups",
 } as const;
+
+/**
+ * How many uploads of a chapter to list. One per Chapter is what the
+ * Deduplicate Chapters switch used to be, and is stored the same way.
+ */
+export const CHAPTER_LIST_OPTIONS = [
+    { id: "group", title: "One per Group" },
+    { id: "chapter", title: "One per Chapter" },
+];
 
 export type UploadChoice = "best" | "smallest";
 

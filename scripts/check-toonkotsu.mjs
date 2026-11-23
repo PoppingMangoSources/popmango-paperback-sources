@@ -142,6 +142,44 @@ t('  Best Quality + Deduplicate keeps the first listed', ids({ mainOnly: true })
 t('  Smallest keeps each group\'s lightest', ids({ mainOnly: false, choice: 'smallest' }), '3,33,22');
 t('  Smallest + Deduplicate keeps each chapter\'s lightest', ids({ mainOnly: true, choice: 'smallest' }), '33,22');
 
+console.log('\ngroups:');
+t('  a hidden group\'s uploads are left out', ids({ mainOnly: false, hiddenGroups: ['b'] }), '3,2');
+t('  One per Chapter takes the next upload when the site\'s first is hidden, and drops a chapter only hidden groups have',
+  ids({ mainOnly: true, hiddenGroups: ['a'] }), '33');
+t('  One per Chapter takes a preferred group\'s upload, else the site\'s first', ids({ mainOnly: true, preferredGroups: ['b'] }), '33,2');
+t('  preferred groups count in list order, and Upload Choice picks among the group\'s own uploads',
+  ids({ mainOnly: true, preferredGroups: ['b', 'a'], choice: 'smallest' }), '33,22');
+t('  with no preferred group having a chapter, Smallest Download still takes the lightest',
+  ids({ mainOnly: true, preferredGroups: ['zzz'], choice: 'smallest' }), '33,22');
+t('  preferred groups change nothing under One per Group', ids({ mainOnly: false, preferredGroups: ['b'] }), '3,33,2');
+const named = { chapters: [
+  { id: 5, n: 5, label: 'Chapter 5', group: { slug: 'night-owls', name: 'Night Owls' }, alts: [
+    { id: 55, label: 'Chapter 5 [Moon TL]' }, { id: 56, group: { slug: 'sun', name: 'Sun' }, partial: true }] },
+] };
+t('  a group is matched by the name shown or by its slug', [
+  ids({ mainOnly: true, preferredGroups: ['night owls'] }, named), ids({ mainOnly: true, preferredGroups: ['night-owls'] }, named)].join(' '), '5 5');
+t('  and by a name the site only gives in brackets', ids({ mainOnly: true, preferredGroups: ['moon tl'] }, named), '55');
+t('  a preferred group\'s partial upload still loses to a complete one', ids({ mainOnly: true, preferredGroups: ['sun'] }, named), '5');
+let hiddenAll = '';
+try { ids({ mainOnly: false, hiddenGroups: ['a', 'b'] }); } catch (error) { hiddenAll = error.message; }
+t('  hiding every group says so, rather than reporting no chapters', /Hidden Groups/.test(hiddenAll), true);
+
+const saved = new Map([['toonkotsu_deduplicate_chapters', true], ['toonkotsu_preferred_groups', ' Night Owls , moon tl,NIGHT OWLS,, ']]);
+Object.assign(App, {
+  createSourceStateManager: () => ({ retrieve: async key => saved.get(key), store: async (key, value) => { saved.set(key, value); } }),
+  createDUIBinding: b => b, createDUISelect: r => r, createDUIInputField: r => r, createDUISwitch: r => r,
+});
+const configured = new (load('src/Toonkotsu/Toonkotsu.js').Toonkotsu)(require('cheerio'));
+await configured.settings.load();
+const chapterRows = (await configured.getSettingsSections()).find(({ id }) => id === 'chapters').rows;
+t('  the settings list Chapter List, Hidden Groups, Preferred Groups, Upload Choice, Upload Size',
+  chapterRows.map(({ label }) => label).join(', '), 'Chapter List, Hidden Groups, Preferred Groups, Upload Choice, Upload Size');
+t('  a reader who had Deduplicate Chapters on sees One per Chapter', (await chapterRows[0].value.get()).join(), 'chapter');
+await chapterRows[0].value.set(['group']);
+t('  and choosing One per Group turns it off', saved.get('toonkotsu_deduplicate_chapters'), false);
+t('  typed names are split at commas, trimmed, lower-cased and kept once, in order',
+  configured.groupList('toonkotsu_preferred_groups').join('|'), 'night owls|moon tl');
+
 console.log('\nvolumes:');
 // Two volumes that each start again at chapter 1, from one group: fewer
 // repeated numbers than the site needs before it splits a list by volume.
