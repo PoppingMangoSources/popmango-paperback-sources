@@ -389,20 +389,25 @@ export const parseChapters = (
 
     const releases = chapters
         .flatMap((entry, position) =>
-            [entry, ...(entry.alts ?? [])].map((release) => ({
-                ...release,
-                n: entry.n,
-                vol: entry.vol,
-                label: release.label ?? entry.label,
-                at: release.at ?? entry.at,
-                canonicalId: entry.id,
-                position,
-            })),
+            [entry, ...(entry.alts ?? [])].map((upload) => {
+                const label = upload.label ?? entry.label;
+                const shownGroup = parseLabel({ id: upload.id, label, group: upload.group }, entry.n).group;
+                const names = groupNames(upload, shownGroup);
+                return {
+                    ...upload,
+                    n: entry.n,
+                    vol: entry.vol,
+                    label,
+                    at: upload.at ?? entry.at,
+                    canonicalId: entry.id,
+                    position,
+                    shownGroup,
+                    names,
+                    // Its place in Preferred Groups; Infinity when it has none.
+                    preferred: names.reduce((best, name) => Math.min(best, preference.get(name) ?? Infinity), Infinity),
+                };
+            }),
         )
-        .map((release) => {
-            const shownGroup = parseLabel(release, release.n).group;
-            return { ...release, shownGroup, names: groupNames(release, shownGroup) };
-        })
         .filter((release) => !release.names.some((name) => hidden.has(name)));
     type Release = (typeof releases)[number];
 
@@ -439,11 +444,8 @@ export const parseChapters = (
 
     // One per Chapter: the best upload of the first preferred group that has
     // the chapter, otherwise the best of all.
-    const preferenceOf = (release: Release): number =>
-        Math.min(Infinity, ...release.names.map((name) => preference.get(name) ?? Infinity));
     // Two unpreferred uploads give NaN, which falls through like a tie.
-    const compareForChapter = (a: Release, b: Release): number =>
-        preferenceOf(a) - preferenceOf(b) || compareReleases(a, b);
+    const compareForChapter = (a: Release, b: Release): number => a.preferred - b.preferred || compareReleases(a, b);
 
     for (const release of releases) {
         const key = chapterKey(release);
