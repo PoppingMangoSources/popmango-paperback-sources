@@ -17,17 +17,7 @@ import {
 
 import { DOMAIN, LANGUAGES, TAXONOMIES, type SearchRequest } from "./models";
 
-/**
- * How long one challenge suppresses the next.
- *
- * The home page loads every section at once, so a challenge would otherwise
- * raise one bypass prompt per request in flight.
- */
-const CHALLENGE_PROMPT_INTERVAL = 60_000;
-
 export class MyReadingMangaInterceptor extends PaperbackInterceptor {
-    private lastChallengeAt = 0;
-
     override async interceptRequest(request: InterceptedRequest): Promise<InterceptedRequest> {
         return {
             ...request,
@@ -51,12 +41,6 @@ export class MyReadingMangaInterceptor extends PaperbackInterceptor {
             request.url.startsWith(DOMAIN) && contentType.includes("text/html") ? body.text : "";
 
         if (isCloudflareChallenge(response.status, response.headers, text)) {
-            const now = Date.now();
-            if (now - this.lastChallengeAt < CHALLENGE_PROMPT_INTERVAL) {
-                throw new Error("A Cloudflare challenge is already open. Solve it, then refresh.");
-            }
-            this.lastChallengeAt = now;
-
             throw new CloudflareError(
                 Application.createRequest({
                     url: `${DOMAIN}/`,
