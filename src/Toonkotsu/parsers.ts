@@ -365,9 +365,10 @@ const groupNames = (release: ChapterRelease, shown: string | undefined): string[
  * choosing the smallest keeps its lightest instead. With mainOnly only one
  * upload of each chapter is kept: the best of the first preferred group that
  * has it, otherwise the best of them all. Hidden groups' uploads are left out
- * either way. With showSize a group's uploads of different sizes stay apart,
- * each with its size in the title. Complete uploads always win over partial
- * ones, and equal uploads go to the newer, then the higher id.
+ * either way. With showSize each upload's size goes in its title, and without
+ * mainOnly a group's uploads of different sizes also stay apart. Complete
+ * uploads always win over partial ones, and equal uploads go to the newer,
+ * then the higher id.
  *
  * 0.9 renumbers same-numbered chapters in different volumes, because it merges
  * chapters that share a number. 0.8 lists every chapter by its own id, so the
@@ -387,28 +388,35 @@ export const parseChapters = (
         }
     });
 
-    const releases = chapters
-        .flatMap((entry, position) =>
-            [entry, ...(entry.alts ?? [])].map((upload) => {
-                const label = upload.label ?? entry.label;
-                const shownGroup = parseLabel({ id: upload.id, label, group: upload.group }, entry.n).group;
-                const names = groupNames(upload, shownGroup);
-                return {
-                    ...upload,
-                    n: entry.n,
-                    vol: entry.vol,
-                    label,
-                    at: upload.at ?? entry.at,
-                    canonicalId: entry.id,
-                    position,
-                    shownGroup,
-                    names,
-                    // Its place in Preferred Groups; Infinity when it has none.
-                    preferred: names.reduce((best, name) => Math.min(best, preference.get(name) ?? Infinity), Infinity),
-                };
-            }),
-        )
-        .filter((release) => !release.names.some((name) => hidden.has(name)));
+    const uploads = chapters.flatMap((entry, position) =>
+        [entry, ...(entry.alts ?? [])].map((upload) => {
+            const label = upload.label ?? entry.label;
+            const shownGroup = parseLabel({ id: upload.id, label, group: upload.group }, entry.n).group;
+            const names = groupNames(upload, shownGroup);
+            return {
+                ...upload,
+                n: entry.n,
+                vol: entry.vol,
+                label,
+                at: upload.at ?? entry.at,
+                canonicalId: entry.id,
+                position,
+                shownGroup,
+                names,
+                // Its place in Preferred Groups; Infinity when it has none.
+                preferred: names.reduce((best, name) => Math.min(best, preference.get(name) ?? Infinity), Infinity),
+            };
+        }),
+    );
+
+    // A chapter in another volume is another chapter, however few numbers
+    // repeat. Seasons are only read from labels, so they count once the site
+    // itself would separate them. They are counted before any group is hidden:
+    // a series' seasons do not stop being separate because a reader hid the
+    // group that made some of their chapters.
+    const bySeason = hasChapterNumberResets(uploads, parseChapterSeason);
+
+    const releases = uploads.filter((release) => !release.names.some((name) => hidden.has(name)));
     type Release = (typeof releases)[number];
 
     if (releases.length === 0 && chapters.length > 0) {
@@ -416,10 +424,6 @@ export const parseChapters = (
         throw new Error("Every upload of this series is by a group in Hidden Groups.");
     }
 
-    // A chapter in another volume is another chapter, however few numbers
-    // repeat. Seasons are only read from labels, so they count once the site
-    // itself would separate them.
-    const bySeason = hasChapterNumberResets(releases, parseChapterSeason);
     const chapterKey = (release: Release): string =>
         JSON.stringify([
             parseChapterNumber(release.vol) ?? release.vol?.toString().trim().toLowerCase() ?? "",
@@ -454,9 +458,10 @@ export const parseChapters = (
         }
         const groupKey = JSON.stringify([
             key,
-            // One per Chapter keeps one upload of a chapter, whoever made it.
+            // One per Chapter keeps one upload of a chapter, whoever made it
+            // and whatever its size; Upload Size then only labels its title.
             mainOnly ? "" : (release.group?.slug ?? release.shownGroup?.toLowerCase() ?? ""),
-            showSize ? (sizeLabel(release.mb) ?? "") : "",
+            !mainOnly && showSize ? (sizeLabel(release.mb) ?? "") : "",
         ]);
         const current = selected.get(groupKey);
         const better = mainOnly ? compareForChapter : compareReleases;

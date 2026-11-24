@@ -155,9 +155,23 @@ t('  equal uploads go to the newer one, whatever their page counts', ids({ mainO
 t('  and equally new ones to the higher id, so the pick never wavers', ids({ mainOnly: true }, ranked), '73');
 t('  One per Group keeps each group\'s newer upload of two equal ones', ids({ mainOnly: false }, ranked), '7,74,72,73');
 t('  One per Chapter with Smallest Download takes the lightest', ids({ mainOnly: true, choice: 'smallest' }, ranked), '7');
+const sized = (options, from = ranked) => parseChapters(from, { mangaId: 'x' }, { showSize: true, ...options })
+  .map(ch => `${ch.chapterId}:${ch.title}`).join(',');
+t('  Upload Size only labels the title under One per Chapter: still one upload per chapter',
+  [sized({ mainOnly: true }), sized({ mainOnly: true, choice: 'smallest' })].join(' '), '73:15 MB 7:9 MB');
+t('  under One per Group it still lists a group\'s uploads of different sizes apart',
+  sized({ mainOnly: false }, series), '3:12 MB,33:9 MB,2:11 MB,22:7 MB');
 
 console.log('\ngroups:');
 t('  a hidden group\'s uploads are left out', ids({ mainOnly: false, hiddenGroups: ['b'] }), '3,2');
+// Two seasons that each start at chapter 1; X made season 1's chapter 1 and
+// all of season 2, Y season 1's chapters 2 and 3.
+const seasons = { chapters: [
+  [101, 1, 1, 'x'], [102, 1, 2, 'y'], [103, 1, 3, 'y'], [201, 2, 1, 'x'], [202, 2, 2, 'x'], [203, 2, 3, 'x'],
+].map(([id, season, n, group]) => ({ id, n, label: `S${season} - Chapter ${n}`, group: { slug: group, name: group.toUpperCase() } })) };
+t('  hiding a group keeps the seasons apart, so season 1\'s chapter 1 stays',
+  [ids({ mainOnly: false, hiddenGroups: ['y'] }, seasons), ids({ mainOnly: true, hiddenGroups: ['y'] }, seasons)].join(' '),
+  '203,202,201,101 203,202,201,101');
 t('  One per Chapter takes another group\'s upload when the best one is hidden, and drops a chapter only hidden groups have',
   ids({ mainOnly: true, hiddenGroups: ['a'] }), '33');
 t('  One per Chapter takes a preferred group\'s upload, else the best of any', ids({ mainOnly: true, preferredGroups: ['b'] }), '33,2');

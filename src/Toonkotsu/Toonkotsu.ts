@@ -252,9 +252,9 @@ export class Toonkotsu extends PopmangoSource {
                     "Separate group names with commas; they aren't case sensitive. Upload Choice says which upload " +
                     "is best, complete ones first: Best Quality the widest, then the largest; Smallest Download the " +
                     "lightest, which is less to download and decrypt. Equal uploads go to the newer one. Upload " +
-                    "Size adds each upload's size to its title and lists a group's uploads of different sizes " +
-                    "separately. Changing these lists other uploads of the same chapters, so chapters read under " +
-                    "one choice can show as unread under another.",
+                    "Size adds each upload's size to its title; under One per Group it also lists a group's uploads " +
+                    "of different sizes separately. Changing these lists other uploads of the same chapters, so " +
+                    "chapters read under one choice can show as unread under another.",
                 rows: [
                     selectRow("chapter_list", {
                         label: "Chapter List",
