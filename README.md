@@ -27,7 +27,20 @@
 
 **PoppingMango Sources** is an independent source collection for [Paperback](https://paperback.moe), covering novels, manga, manhwa, and manhua. This repository contains the Paperback 0.8 compatibility ports and publishes the combined directory for both the 0.8 and 0.9 catalogs.
 
+**Paperback 0.8 source requests and pull requests are welcome here.** Use the source request form below to suggest a website, or see [Development](#development) to contribute a new source, fix, or improvement.
+
 Paperback 0.8 and 0.9 use different extension APIs. Install the repository that matches your app; the 0.8 sources here are rebuilt for Paperback 0.8 rather than repackaged 0.9 bundles.
+
+<details>
+<summary><b>Request a Paperback 0.8 source</b></summary>
+
+Want a website added to Paperback 0.8? You can request it here without writing any code.
+
+1. Check the [0.8 catalog](#paperback-08-sources) and [existing requests](https://github.com/PoppingMangoSources/popmango-paperback-sources/issues?q=is%3Aissue%20label%3A%22source%20request%22) first. If someone has already requested it, add any useful details to their issue.
+2. Open the [source request form](https://github.com/PoppingMangoSources/popmango-paperback-sources/issues/new?template=source_request.yml).
+3. Include the website URL and language. If you know of an extension for another app or Paperback version, link it in the notes, along with any login requirements or access problems.
+
+</details>
 
 ## Paperback 0.9 Sources
 
@@ -124,14 +137,18 @@ Source problems are handled in the [**OTHER-REPOS**](https://discord.com/channel
   </a>
 </p>
 
-Include the affected source, the page or title that failed, and screenshots or request details when possible. For a new source suggestion, use the repository’s source-request issue form.
+Include the affected source, the page or title that failed, and screenshots or request details when possible. To suggest a new Paperback 0.8 source, use the [source request form](https://github.com/PoppingMangoSources/popmango-paperback-sources/issues/new?template=source_request.yml).
 
 ## Development
+
+**Pull requests are welcome**, including new Paperback 0.8 sources, fixes, and improvements to existing sources.
 
 Start with [AGENTS.md](AGENTS.md) and [DEVELOPMENT.md](DEVELOPMENT.md). The
 [Paperback 0.8 skill](.agents/skills/paperback-extension/SKILL.md) covers source
 work; [conversion](docs/CONVERSION.md) and [device testing](docs/TESTING.md)
 describe the platform differences and checks that need the app.
+
+To contribute, fork this repository, create a branch from `main`, and make your changes using Node 22 and the pinned Paperback 0.8 toolchain. Run `npm ci` and `npm run verify`, then open a [pull request](https://github.com/PoppingMangoSources/popmango-paperback-sources/compare) targeting this repository's `main` branch. Briefly explain what changed and what you tested, including any checks you ran on Paperback 0.8.
 
 <details>
 <summary><b>Build and conversion notes</b></summary>
