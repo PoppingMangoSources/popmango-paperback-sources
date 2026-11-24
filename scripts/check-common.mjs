@@ -35,6 +35,7 @@ globalThis.App = {
   createRequestManager: options => ({ ...options, getDefaultUserAgent: async () => 'UA', schedule: async () => { throw new Error('offline'); } }),
   createRequest: r => ({ ...r }), createCookie: c => c,
   createChapter: c => c, createChapterDetails: c => c, createPagedResults: r => r, createPartialSourceManga: p => p,
+  createSourceManga: m => m, createMangaInfo: m => m,
 };
 const { SettingsStore } = require(path.join(out, 'common', 'Settings.js'));
 const { PopmangoSource } = require(path.join(out, 'common', 'Source.js'));
@@ -87,6 +88,21 @@ try { await new Fixture([]).getChapters('m'); } catch (error) { message = error.
 t('  an empty chapter list is an error, so progress is kept', /No chapters were found/.test(message), true);
 const listed = await new Fixture([{ chapterId: 'c1', chapNum: 1, sourceManga: { mangaId: 'm' } }]).getChapters('m');
 t('  a listed chapter still comes through', listed.length, 1);
+class Counting extends Fixture {
+  constructor(stub) { super([{ chapterId: 'c1', chapNum: 1, sourceManga: { mangaId: 'm' } }]); this.stub = stub; this.details = 0; this.given = undefined; }
+  async getMangaInfo(mangaId) { this.details++; return super.getMangaInfo(mangaId); }
+  async getChapterList(manga) { this.given = manga; return super.getChapterList(manga); }
+  mangaForChapterList(mangaId) { return this.stub ? { mangaId, mangaInfo: { primaryTitle: 'stub' } } : undefined; }
+}
+const plain = new Counting(false);
+await plain.getChapters('m');
+t('  chapters of a series not opened fetch its details first, by default', plain.details, 1);
+const stubbed = new Counting(true);
+await stubbed.getChapters('m');
+t('  unless the source can list chapters from the id alone', [stubbed.details, stubbed.given.mangaInfo.primaryTitle], [0, 'stub']);
+await stubbed.getMangaDetails('m');
+await stubbed.getChapters('m');
+t('  details the app just opened are still the ones handed over', [stubbed.details, stubbed.given.mangaInfo.primaryTitle], [1, 'T']);
 const searching = new Fixture([]);
 await searching.getSearchResults({ title: 'Boys’ Love', includedTags: [], excludedTags: [], parameters: { tags: '‘Gore’', page: 2 } }, undefined);
 t('  search text and typed fields lose curly quotes', [searching.seen.title, searching.seen.parameters], ['Boys\' Love', { tags: '\'Gore\'', page: 2 }]);

@@ -11,6 +11,7 @@ import {
     ContentRating,
     DiscoverSectionType,
     PopmangoSource,
+    inputRow,
     selectRow,
     sourceInfo,
     switchRow,
@@ -30,6 +31,7 @@ import {
 
 import { deriveReaderKey, signReaderPath, type ReaderKey } from "./crypto";
 import {
+    CHAPTER_LIST_OPTIONS,
     CONTENT_RATING_OPTIONS,
     COUNTRY_OPTIONS,
     DEFAULT_CONTENT_RATINGS,
@@ -97,7 +99,7 @@ import {
 export const ToonkotsuInfo = sourceInfo({
     name: "Toonkotsu",
     description: "Extension that pulls content from toonkotsu.com.",
-    version: "1.0.3",
+    version: "1.0.4",
     icon: "icon.png",
     language: "English",
     websiteBaseURL: DOMAIN,
@@ -163,8 +165,22 @@ export class Toonkotsu extends PopmangoSource {
         return visible.length > 0 ? visible : SECTION_IDS;
     }
 
+    /** One per Chapter rather than One per Group. */
     private get deduplicateChapters(): boolean {
         return this.settings.boolean(STATE_KEYS.DEDUPLICATE_CHAPTERS, false);
+    }
+
+    /** Group names typed with commas between them, in lower case, each once, in the order given. */
+    private groupList(key: string): string[] {
+        return [
+            ...new Set(
+                this.settings
+                    .string(key, "")
+                    .split(",")
+                    .map((name) => name.trim().toLowerCase())
+                    .filter(Boolean),
+            ),
+        ];
     }
 
     private get uploadChoice(): UploadChoice {
@@ -231,18 +247,30 @@ export class Toonkotsu extends PopmangoSource {
                 id: "chapters",
                 header: "Chapters",
                 footer:
-                    "Deduplicate Chapters lists only the upload the site shows first for each chapter, not one from " +
-                    "every group. Upload Choice picks among a chapter's uploads: Best Quality keeps each group's " +
-                    "widest, Smallest Download its lightest, which is less to download and decrypt; with Deduplicate " +
-                    "Chapters on, Smallest Download keeps the lightest upload of each chapter from any group. Upload " +
-                    "Size adds each upload's size to its title and lists a group's uploads of different sizes " +
-                    "separately. Changing these lists other uploads of the same chapters, so chapters read under " +
-                    "one choice can show as unread under another.",
+                    "One per Chapter keeps one upload of each chapter, taken from your Preferred Groups in list " +
+                    "order, otherwise the best of any group. Hidden Groups' uploads are left out either way. " +
+                    "Separate group names with commas; they aren't case sensitive. Upload Choice says which upload " +
+                    "is best, complete ones first: Best Quality the widest, then the largest; Smallest Download the " +
+                    "lightest, which is less to download and decrypt. Equal uploads go to the newer one. Upload " +
+                    "Size adds each upload's size to its title; under One per Group it also lists a group's uploads " +
+                    "of different sizes separately. Changing these lists other uploads of the same chapters, so " +
+                    "chapters read under one choice can show as unread under another.",
                 rows: [
-                    switchRow("deduplicate_chapters", {
-                        label: "Deduplicate Chapters",
-                        get: () => this.deduplicateChapters,
-                        set: (value) => this.settings.set(STATE_KEYS.DEDUPLICATE_CHAPTERS, value),
+                    selectRow("chapter_list", {
+                        label: "Chapter List",
+                        options: CHAPTER_LIST_OPTIONS,
+                        get: () => [this.deduplicateChapters ? "chapter" : "group"],
+                        set: (value) => this.settings.set(STATE_KEYS.DEDUPLICATE_CHAPTERS, value[0] === "chapter"),
+                    }),
+                    inputRow("hidden_groups", {
+                        label: "Hidden Groups",
+                        get: () => this.settings.string(STATE_KEYS.HIDDEN_GROUPS, ""),
+                        set: (value) => this.settings.set(STATE_KEYS.HIDDEN_GROUPS, value),
+                    }),
+                    inputRow("preferred_groups", {
+                        label: "Preferred Groups",
+                        get: () => this.settings.string(STATE_KEYS.PREFERRED_GROUPS, ""),
+                        set: (value) => this.settings.set(STATE_KEYS.PREFERRED_GROUPS, value),
                     }),
                     selectRow("upload_choice", {
                         label: "Upload Choice",
@@ -545,6 +573,8 @@ export class Toonkotsu extends PopmangoSource {
             mainOnly: this.deduplicateChapters,
             showSize: this.showUploadSize,
             choice: this.uploadChoice,
+            hiddenGroups: this.groupList(STATE_KEYS.HIDDEN_GROUPS),
+            preferredGroups: this.groupList(STATE_KEYS.PREFERRED_GROUPS),
         });
     }
 

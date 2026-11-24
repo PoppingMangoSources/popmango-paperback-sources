@@ -138,9 +138,75 @@ const series = { chapters: [
 ] };
 const ids = (options, from = series) => parseChapters(from, { mangaId: 'x' }, { showSize: false, ...options }).map(ch => ch.chapterId).join(',');
 t('  Best Quality keeps each group\'s widest', ids({ mainOnly: false }), '3,33,2');
-t('  Best Quality + Deduplicate keeps the first listed', ids({ mainOnly: true }), '3,2');
+t('  Best Quality + Deduplicate keeps each chapter\'s widest', ids({ mainOnly: true }), '3,2');
 t('  Smallest keeps each group\'s lightest', ids({ mainOnly: false, choice: 'smallest' }), '3,33,22');
 t('  Smallest + Deduplicate keeps each chapter\'s lightest', ids({ mainOnly: true, choice: 'smallest' }), '33,22');
+// As on the site: the upload listed first is no better than the rest, and the
+// same chapter comes cut into very different numbers of images.
+const ranked = { chapters: [
+  { id: 7, n: 7, label: 'Chapter 7', group: { slug: 'a', name: 'A' }, w: 720, mb: 9, pages: 20, at: 3000, alts: [
+    { id: 71, group: { slug: 'b', name: 'B' }, w: 1200, mb: 15, pages: 26, at: 1000 },
+    { id: 72, group: { slug: 'c', name: 'C' }, w: 1200, mb: 15, pages: 240, at: 2000 },
+    { id: 73, group: { slug: 'd', name: 'D' }, w: 1200, mb: 15, pages: 26, at: 2000 },
+    { id: 74, group: { slug: 'b', name: 'B' }, w: 1200, mb: 15, pages: 26, at: 1500 }] },
+] };
+t('  One per Chapter takes the best of any group, not the upload the site lists first', ids({ mainOnly: true }, ranked), '73');
+t('  equal uploads go to the newer one, whatever their page counts', ids({ mainOnly: true, hiddenGroups: ['d'] }, ranked), '72');
+t('  and equally new ones to the higher id, so the pick never wavers', ids({ mainOnly: true }, ranked), '73');
+t('  One per Group keeps each group\'s newer upload of two equal ones', ids({ mainOnly: false }, ranked), '7,74,72,73');
+t('  One per Chapter with Smallest Download takes the lightest', ids({ mainOnly: true, choice: 'smallest' }, ranked), '7');
+const sized = (options, from = ranked) => parseChapters(from, { mangaId: 'x' }, { showSize: true, ...options })
+  .map(ch => `${ch.chapterId}:${ch.title}`).join(',');
+t('  Upload Size only labels the title under One per Chapter: still one upload per chapter',
+  [sized({ mainOnly: true }), sized({ mainOnly: true, choice: 'smallest' })].join(' '), '73:15 MB 7:9 MB');
+t('  under One per Group it still lists a group\'s uploads of different sizes apart',
+  sized({ mainOnly: false }, series), '3:12 MB,33:9 MB,2:11 MB,22:7 MB');
+
+console.log('\ngroups:');
+t('  a hidden group\'s uploads are left out', ids({ mainOnly: false, hiddenGroups: ['b'] }), '3,2');
+// Two seasons that each start at chapter 1; X made season 1's chapter 1 and
+// all of season 2, Y season 1's chapters 2 and 3.
+const seasons = { chapters: [
+  [101, 1, 1, 'x'], [102, 1, 2, 'y'], [103, 1, 3, 'y'], [201, 2, 1, 'x'], [202, 2, 2, 'x'], [203, 2, 3, 'x'],
+].map(([id, season, n, group]) => ({ id, n, label: `S${season} - Chapter ${n}`, group: { slug: group, name: group.toUpperCase() } })) };
+t('  hiding a group keeps the seasons apart, so season 1\'s chapter 1 stays',
+  [ids({ mainOnly: false, hiddenGroups: ['y'] }, seasons), ids({ mainOnly: true, hiddenGroups: ['y'] }, seasons)].join(' '),
+  '203,202,201,101 203,202,201,101');
+t('  One per Chapter takes another group\'s upload when the best one is hidden, and drops a chapter only hidden groups have',
+  ids({ mainOnly: true, hiddenGroups: ['a'] }), '33');
+t('  One per Chapter takes a preferred group\'s upload, else the best of any', ids({ mainOnly: true, preferredGroups: ['b'] }), '33,2');
+t('  preferred groups count in list order, and Upload Choice picks among the group\'s own uploads',
+  ids({ mainOnly: true, preferredGroups: ['b', 'a'], choice: 'smallest' }), '33,22');
+t('  with no preferred group having a chapter, Smallest Download still takes the lightest',
+  ids({ mainOnly: true, preferredGroups: ['zzz'], choice: 'smallest' }), '33,22');
+t('  preferred groups change nothing under One per Group', ids({ mainOnly: false, preferredGroups: ['b'] }), '3,33,2');
+const named = { chapters: [
+  { id: 5, n: 5, label: 'Chapter 5', group: { slug: 'night-owls', name: 'Night Owls' }, alts: [
+    { id: 55, label: 'Chapter 5 [Moon TL]' }, { id: 56, group: { slug: 'sun', name: 'Sun' }, partial: true }] },
+] };
+t('  a group is matched by the name shown or by its slug', [
+  ids({ mainOnly: true, preferredGroups: ['night owls'] }, named), ids({ mainOnly: true, preferredGroups: ['night-owls'] }, named)].join(' '), '5 5');
+t('  and by a name the site only gives in brackets', ids({ mainOnly: true, preferredGroups: ['moon tl'] }, named), '55');
+t('  a preferred group\'s partial upload still loses to the complete ones', ids({ mainOnly: true, preferredGroups: ['sun'] }, named), '55');
+let hiddenAll = '';
+try { ids({ mainOnly: false, hiddenGroups: ['a', 'b'] }); } catch (error) { hiddenAll = error.message; }
+t('  hiding every group says so, rather than reporting no chapters', /Hidden Groups/.test(hiddenAll), true);
+
+const saved = new Map([['toonkotsu_deduplicate_chapters', true], ['toonkotsu_preferred_groups', ' Night Owls , moon tl,NIGHT OWLS,, ']]);
+Object.assign(App, {
+  createSourceStateManager: () => ({ retrieve: async key => saved.get(key), store: async (key, value) => { saved.set(key, value); } }),
+  createDUIBinding: b => b, createDUISelect: r => r, createDUIInputField: r => r, createDUISwitch: r => r,
+});
+const configured = new (load('src/Toonkotsu/Toonkotsu.js').Toonkotsu)(require('cheerio'));
+await configured.settings.load();
+const chapterRows = (await configured.getSettingsSections()).find(({ id }) => id === 'chapters').rows;
+t('  the settings list Chapter List, Hidden Groups, Preferred Groups, Upload Choice, Upload Size',
+  chapterRows.map(({ label }) => label).join(', '), 'Chapter List, Hidden Groups, Preferred Groups, Upload Choice, Upload Size');
+t('  a reader who had Deduplicate Chapters on sees One per Chapter', (await chapterRows[0].value.get()).join(), 'chapter');
+await chapterRows[0].value.set(['group']);
+t('  and choosing One per Group turns it off', saved.get('toonkotsu_deduplicate_chapters'), false);
+t('  typed names are split at commas, trimmed, lower-cased and kept once, in order',
+  configured.groupList('toonkotsu_preferred_groups').join('|'), 'night owls|moon tl');
 
 console.log('\nvolumes:');
 // Two volumes that each start again at chapter 1, from one group: fewer

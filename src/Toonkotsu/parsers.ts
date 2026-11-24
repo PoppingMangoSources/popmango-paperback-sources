@@ -343,15 +343,32 @@ const hasChapterNumberResets = (
 const sizeLabel = (mb: number | null | undefined): string | undefined =>
     mb && mb > 0 ? `${Number(mb.toFixed(mb >= 100 ? 0 : 1))} MB` : undefined;
 
+export interface ChapterListOptions {
+    /** One per Chapter: a single upload of each chapter, rather than one from each group. */
+    mainOnly: boolean;
+    showSize: boolean;
+    choice?: UploadChoice;
+    /** Groups whose uploads are left out, by name or slug, in lower case. */
+    hiddenGroups?: readonly string[];
+    /** Groups One per Chapter takes a chapter from first, most preferred first, in lower case. */
+    preferredGroups?: readonly string[];
+}
+
+/** What a reader would type for who an upload is by: its group's slug and the name the app shows. */
+const groupNames = (release: ChapterRelease, shown: string | undefined): string[] =>
+    [release.group?.slug, shown].map((name) => name?.trim().toLowerCase() ?? "").filter(Boolean);
+
 /**
  * Every chapter, one upload per group.
  *
- * A group's best upload of each chapter is kept, its widest and then largest,
- * as the site's chapter list does; choosing the smallest keeps its lightest
- * instead. With mainOnly only one upload of each chapter is kept: the one the
- * site lists first, or with the smallest choice the lightest of them all. With
- * showSize a group's uploads of different sizes stay apart, each with its size
- * in the title. Complete uploads always win over partial ones.
+ * A group's best upload of each chapter is kept, its widest and then largest;
+ * choosing the smallest keeps its lightest instead. With mainOnly only one
+ * upload of each chapter is kept: the best of the first preferred group that
+ * has it, otherwise the best of them all. Hidden groups' uploads are left out
+ * either way. With showSize each upload's size goes in its title, and without
+ * mainOnly a group's uploads of different sizes also stay apart. Complete
+ * uploads always win over partial ones, and equal uploads go to the newer,
+ * then the higher id.
  *
  * 0.9 renumbers same-numbered chapters in different volumes, because it merges
  * chapters that share a number. 0.8 lists every chapter by its own id, so the
@@ -360,27 +377,53 @@ const sizeLabel = (mb: number | null | undefined): string | undefined =>
 export const parseChapters = (
     { chapters }: SeriesResponse,
     sourceManga: SourceManga,
-    { mainOnly, showSize, choice = "best" }: { mainOnly: boolean; showSize: boolean; choice?: UploadChoice },
+    { mainOnly, showSize, choice = "best", hiddenGroups = [], preferredGroups = [] }: ChapterListOptions,
 ): Chapter[] => {
     const smallest = choice === "smallest";
-    const releases = chapters.flatMap((entry, position) =>
-        (mainOnly && !smallest ? [entry] : [entry, ...(entry.alts ?? [])]).map((release, index) => ({
-            ...release,
-            n: entry.n,
-            vol: entry.vol,
-            label: release.label ?? entry.label,
-            at: release.at ?? entry.at,
-            canonicalId: entry.id,
-            catalogueDefault: index === 0,
-            position,
-        })),
+    const hidden = new Set(hiddenGroups);
+    const preference = new Map<string, number>();
+    preferredGroups.forEach((name, index) => {
+        if (!preference.has(name)) {
+            preference.set(name, index);
+        }
+    });
+
+    const uploads = chapters.flatMap((entry, position) =>
+        [entry, ...(entry.alts ?? [])].map((upload) => {
+            const label = upload.label ?? entry.label;
+            const shownGroup = parseLabel({ id: upload.id, label, group: upload.group }, entry.n).group;
+            const names = groupNames(upload, shownGroup);
+            return {
+                ...upload,
+                n: entry.n,
+                vol: entry.vol,
+                label,
+                at: upload.at ?? entry.at,
+                canonicalId: entry.id,
+                position,
+                shownGroup,
+                names,
+                // Its place in Preferred Groups; Infinity when it has none.
+                preferred: names.reduce((best, name) => Math.min(best, preference.get(name) ?? Infinity), Infinity),
+            };
+        }),
     );
-    type Release = (typeof releases)[number];
 
     // A chapter in another volume is another chapter, however few numbers
     // repeat. Seasons are only read from labels, so they count once the site
-    // itself would separate them.
-    const bySeason = hasChapterNumberResets(releases, parseChapterSeason);
+    // itself would separate them. They are counted before any group is hidden:
+    // a series' seasons do not stop being separate because a reader hid the
+    // group that made some of their chapters.
+    const bySeason = hasChapterNumberResets(uploads, parseChapterSeason);
+
+    const releases = uploads.filter((release) => !release.names.some((name) => hidden.has(name)));
+    type Release = (typeof releases)[number];
+
+    if (releases.length === 0 && chapters.length > 0) {
+        // Otherwise the app is told there are no chapters, as if the site had lost them.
+        throw new Error("Every upload of this series is by a group in Hidden Groups.");
+    }
+
     const chapterKey = (release: Release): string =>
         JSON.stringify([
             parseChapterNumber(release.vol) ?? release.vol?.toString().trim().toLowerCase() ?? "",
@@ -390,34 +433,39 @@ export const parseChapters = (
 
     const selected = new Map<string, { release: Release; order: number }>();
     // Prefer complete uploads, then the widest and largest (or the lightest,
-    // then the widest), then catalogue defaults, position and ID. An upload of
-    // unknown size counts as the heaviest.
+    // then the widest), then the newest and the highest id, so the same list
+    // always gives the same pick. An upload of unknown size counts as the
+    // heaviest. Page counts are not compared: the same chapter comes cut into
+    // 23 images or 261, so more pages means finer cutting, not more chapter.
+    // Nor is the upload the site lists first, which is no better than the rest.
     const compareSize = (a: Release, b: Release): number =>
         smallest
             ? (a.mb ?? Infinity) - (b.mb ?? Infinity) || (b.w ?? 0) - (a.w ?? 0)
             : (b.w ?? 0) - (a.w ?? 0) || (b.mb ?? 0) - (a.mb ?? 0);
     const compareReleases = (a: Release, b: Release): number =>
-        Number(!!a.partial) - Number(!!b.partial) ||
-        compareSize(a, b) ||
-        Number(b.catalogueDefault) - Number(a.catalogueDefault) ||
-        a.position - b.position ||
-        a.id - b.id;
+        Number(!!a.partial) - Number(!!b.partial) || compareSize(a, b) || (b.at ?? 0) - (a.at ?? 0) || b.id - a.id;
     const complete = new Set(releases.filter((release) => !release.partial).map(chapterKey));
+
+    // One per Chapter: the best upload of the first preferred group that has
+    // the chapter, otherwise the best of all.
+    // Two unpreferred uploads give NaN, which falls through like a tie.
+    const compareForChapter = (a: Release, b: Release): number => a.preferred - b.preferred || compareReleases(a, b);
 
     for (const release of releases) {
         const key = chapterKey(release);
         if (release.partial && complete.has(key)) {
             continue;
         }
-        const { group } = parseLabel(release, release.n);
         const groupKey = JSON.stringify([
             key,
-            // Deduplicating to the smallest keeps one upload of a chapter, whoever made it.
-            mainOnly && smallest ? "" : (release.group?.slug ?? group?.toLowerCase() ?? ""),
-            showSize ? (sizeLabel(release.mb) ?? "") : "",
+            // One per Chapter keeps one upload of a chapter, whoever made it
+            // and whatever its size; Upload Size then only labels its title.
+            mainOnly ? "" : (release.group?.slug ?? release.shownGroup?.toLowerCase() ?? ""),
+            !mainOnly && showSize ? (sizeLabel(release.mb) ?? "") : "",
         ]);
         const current = selected.get(groupKey);
-        if (!current || compareReleases(release, current.release) < 0) {
+        const better = mainOnly ? compareForChapter : compareReleases;
+        if (!current || better(release, current.release) < 0) {
             selected.set(groupKey, { release, order: current?.order ?? selected.size });
         }
     }
